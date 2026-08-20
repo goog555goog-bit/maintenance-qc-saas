@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --primary-50: oklch(97% 0.01 240);
+    --primary-100: oklch(93% 0.02 240);
+    --primary-500: oklch(55% 0.12 250);
+    --primary-600: oklch(45% 0.1 250);
+    --primary-900: oklch(25% 0.05 250);
+
+    --surface: oklch(100% 0 0);
+    --surface-muted: oklch(98% 0 0);
+    --border: oklch(90% 0 0);
+    --text-main: oklch(20% 0 0);
+    --text-muted: oklch(50% 0 0);
+    
+    --bg-main: oklch(99% 0 0);
+  }
+
+  [data-theme='dark'] {
+    --primary-50: oklch(20% 0.02 240);
+    --primary-100: oklch(25% 0.03 240);
+    --primary-500: oklch(65% 0.12 250);
+    --primary-600: oklch(75% 0.1 250);
+    --primary-900: oklch(95% 0.05 250);
+
+    --surface: oklch(15% 0 0);
+    --surface-muted: oklch(20% 0 0);
+    --border: oklch(25% 0 0);
+    --text-main: oklch(95% 0 0);
+    --text-muted: oklch(70% 0 0);
+    
+    --bg-main: oklch(10% 0 0);
+  }
+
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: 'Inter', 'Noto Sans Thai', sans-serif;
+  }
+}
