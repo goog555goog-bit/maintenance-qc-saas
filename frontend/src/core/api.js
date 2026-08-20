@@ -1,4 +1,9 @@
+import { CONFIG } from '../config';
+
 export const getGasUrl = () => {
+  if (CONFIG && CONFIG.GAS_API_URL && !CONFIG.GAS_API_URL.includes('ใส่_URL')) {
+    return CONFIG.GAS_API_URL.trim();
+  }
   return import.meta.env.VITE_GAS_URL || localStorage.getItem('gas_api_url') || '';
 };
 
