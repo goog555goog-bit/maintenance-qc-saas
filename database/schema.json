@@ -1,6 +1,7 @@
 {
   "sheets": [
-    { "name": "Users", "columns": ["user_id", "username", "password_hash", "salt", "role", "active"] },
+    { "name": "Users", "columns": ["user_id", "username", "email", "password_hash", "salt", "role", "active"] },
+    { "name": "Password_Resets", "columns": ["reset_id", "user_id", "email", "otp_code", "expires_at", "used", "created_at"] },
     { "name": "Branches", "columns": ["branch_id", "branch_name", "location_lat", "location_lng", "status"] },
     { "name": "Teams", "columns": ["team_id", "team_name", "status"] },
     { "name": "Fuel_Rates", "columns": ["rate_id", "effective_date", "rate_per_km", "created_by", "created_at", "status"] },

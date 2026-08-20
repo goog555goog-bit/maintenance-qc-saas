@@ -11,7 +11,9 @@ import {
   Settings2, 
   Activity, 
   CheckCircle2, 
-  XCircle 
+  XCircle,
+  Mail,
+  X 
 } from 'lucide-react';
 import { apiCall, getGasUrl, setGasUrl } from '@/core/api';
 import { useAuth } from '@/core/auth';
@@ -33,6 +35,19 @@ export default function Login({ setRole }) {
   const [testingConnection, setTestingConnection] = useState(false);
   const [testResult, setTestResult] = useState(null);
 
+  // Forgot Password / OTP modal state
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotStep, setForgotStep] = useState(1); // 1: Request OTP, 2: Verify & Reset
+  const [forgotIdentifier, setForgotIdentifier] = useState('');
+  const [forgotUserId, setForgotUserId] = useState('');
+  const [maskedEmail, setMaskedEmail] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState('');
+  const [forgotSuccess, setForgotSuccess] = useState('');
+
   const handleTestConnection = async () => {
     if (!customApiUrl || !customApiUrl.startsWith('https://script.google.com/')) {
       setTestResult({
@@ -53,7 +68,7 @@ export default function Login({ setRole }) {
       });
 
       const data = await res.json();
-      if (data && (data.success || data.status === 'OK' || data.result)) {
+      if (data && (data.success || data.status === 'OK' || data.result || data.data)) {
         setTestResult({
           success: true,
           message: 'เชื่อมต่อสำเร็จ! Google Apps Script Backend ออนไลน์และพร้อมรับคำสั่ง'
@@ -130,6 +145,67 @@ export default function Login({ setRole }) {
     }
   };
 
+  // Step 1: Send OTP
+  const handleRequestOtp = async (e) => {
+    e.preventDefault();
+    setForgotError('');
+    setForgotLoading(true);
+
+    try {
+      const res = await apiCall('auth.forgotPassword', {
+        identifier: forgotIdentifier.trim()
+      });
+
+      setForgotUserId(res.user_id);
+      setMaskedEmail(res.masked_email || 'อีเมลของคุณ');
+      setForgotStep(2);
+      setForgotSuccess(res.message || 'ส่งรหัส OTP 6 หลักไปยังอีเมลของคุณเรียบร้อยแล้ว');
+    } catch (err) {
+      setForgotError(err.message || 'ไม่สามารถส่ง OTP ได้ โปรดตรวจสอบรหัสพนักงาน');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  // Step 2: Reset Password with OTP
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setForgotError('');
+
+    if (newPassword !== confirmPassword) {
+      setForgotError('รหัสผ่านใหม่และการยืนยันรหัสผ่านไม่ตรงกัน');
+      return;
+    }
+
+    if (newPassword.length < 4) {
+      setForgotError('รหัสผ่านต้องมีความยาวอย่างน้อย 4 ตัวอักษร');
+      return;
+    }
+
+    setForgotLoading(true);
+
+    try {
+      const res = await apiCall('auth.resetPassword', {
+        user_id: forgotUserId,
+        otp_code: otpCode.trim(),
+        new_password: newPassword
+      });
+
+      setForgotSuccess(res.message || 'ตั้งรหัสผ่านใหม่สำเร็จแล้ว');
+      setTimeout(() => {
+        setShowForgotModal(false);
+        setUsername(forgotUserId);
+        setPassword(newPassword);
+        setForgotStep(1);
+        setForgotSuccess('');
+      }, 1500);
+    } catch (err) {
+      setForgotError(err.message || 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen w-full flex flex-col justify-center items-center bg-slate-50 p-4 antialiased">
       {/* Background Subtle Grid Pattern */}
@@ -162,7 +238,7 @@ export default function Login({ setRole }) {
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
-                รหัสพนักงาน / อีเมล
+                รหัสพนักงาน (User ID)
               </label>
               <div className="relative">
                 <User className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
@@ -170,7 +246,7 @@ export default function Login({ setRole }) {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="เช่น admin หรือ EMP-0001"
+                  placeholder="เช่น EMP-0001"
                   className="pl-9 w-full rounded border border-slate-300 py-2 px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 outline-none transition-all"
                   required
                   autoFocus
@@ -183,6 +259,19 @@ export default function Login({ setRole }) {
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">
                   รหัสผ่าน
                 </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgotModal(true);
+                    setForgotStep(1);
+                    setForgotError('');
+                    setForgotSuccess('');
+                    setForgotIdentifier(username);
+                  }}
+                  className="text-[11px] font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                >
+                  ลืมรหัสผ่าน?
+                </button>
               </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
@@ -190,11 +279,14 @@ export default function Login({ setRole }) {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="กรอกรหัสผ่านของคุณ"
+                  placeholder="รหัสผ่าน (เริ่มต้นใช้รหัสพนักงาน)"
                   className="pl-9 w-full rounded border border-slate-300 py-2 px-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 outline-none transition-all"
                   required
                 />
               </div>
+              <p className="text-[11px] text-slate-400 mt-1.5">
+                * สำหรับเข้าใช้งานครั้งแรก: ใช้รหัสพนักงานเป็นรหัสผ่านเริ่มต้น
+              </p>
             </div>
 
             <div className="flex items-center justify-between pt-1">
@@ -240,7 +332,7 @@ export default function Login({ setRole }) {
                 <span>ตั้งค่าจุดเชื่อมต่อ API</span>
               </span>
               <span className="text-[10px] text-slate-400">
-                {getGasUrl() ? 'บันทึกแล้ว' : 'จำเป็นต้องระบุ'}
+                {getGasUrl() ? 'เชื่อมต่อแล้ว' : 'จำเป็นต้องระบุ'}
               </span>
             </button>
 
@@ -310,8 +402,156 @@ export default function Login({ setRole }) {
           <span>ระบบรองรับ RBAC และ Audit Trail แบบหลายระดับ</span>
         </div>
       </div>
+
+      {/* Forgot Password Modal (OTP via Email) */}
+      {showForgotModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+          <div className="bg-white w-full max-w-sm rounded-xl border border-slate-200 shadow-xl p-6 relative">
+            <button
+              type="button"
+              onClick={() => setShowForgotModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="mb-4">
+              <div className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-blue-50 text-blue-600 mb-2">
+                <Mail className="w-4 h-4" />
+              </div>
+              <h2 className="text-base font-bold text-slate-900">
+                {forgotStep === 1 ? 'กู้คืนรหัสผ่านด้วย OTP' : 'ตั้งรหัสผ่านใหม่'}
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {forgotStep === 1 
+                  ? 'ระบบจะส่งรหัส OTP 6 หลักไปยังอีเมลที่ผูกไว้กับบัญชีของคุณ'
+                  : `กรอกรหัส OTP ที่ได้รับทางอีเมล ${maskedEmail}`}
+              </p>
+            </div>
+
+            {forgotError && (
+              <div className="mb-4 p-2.5 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-md flex items-start gap-2">
+                <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+                <span>{forgotError}</span>
+              </div>
+            )}
+
+            {forgotSuccess && (
+              <div className="mb-4 p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-md flex items-start gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                <span>{forgotSuccess}</span>
+              </div>
+            )}
+
+            {forgotStep === 1 ? (
+              <form onSubmit={handleRequestOtp} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    รหัสพนักงาน หรือ อีเมล
+                  </label>
+                  <input
+                    type="text"
+                    value={forgotIdentifier}
+                    onChange={(e) => setForgotIdentifier(e.target.value)}
+                    placeholder="เช่น EMP-0001"
+                    className="w-full rounded border border-slate-300 py-2 px-3 text-xs text-slate-900 focus:border-slate-900 outline-none"
+                    required
+                    autoFocus
+                  />
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    * ต้องเป็นบัญชีที่ได้ทำการผูกอีเมลไว้ในระบบแล้ว
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={forgotLoading}
+                  className="w-full py-2.5 bg-slate-900 text-white rounded text-xs font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
+                >
+                  {forgotLoading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>กำลังส่ง OTP...</span>
+                    </>
+                  ) : (
+                    <span>ส่งรหัส OTP ไปที่อีเมล</span>
+                  )}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleResetPassword} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    รหัส OTP 6 หลัก
+                  </label>
+                  <input
+                    type="text"
+                    maxLength="6"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value)}
+                    placeholder="เช่น 123456"
+                    className="w-full text-center tracking-widest font-mono text-base font-bold rounded border border-slate-300 py-2 px-3 text-slate-900 focus:border-slate-900 outline-none"
+                    required
+                    autoFocus
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    รหัสผ่านใหม่
+                  </label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="กำหนดรหัสผ่านใหม่"
+                    className="w-full rounded border border-slate-300 py-2 px-3 text-xs text-slate-900 focus:border-slate-900 outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    ยืนยันรหัสผ่านใหม่
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="กรอกรหัสผ่านใหม่อีกครั้ง"
+                    className="w-full rounded border border-slate-300 py-2 px-3 text-xs text-slate-900 focus:border-slate-900 outline-none"
+                    required
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setForgotStep(1)}
+                    className="w-1/3 py-2 border border-slate-300 text-slate-700 rounded text-xs font-semibold hover:bg-slate-50 transition-colors"
+                  >
+                    ย้อนกลับ
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={forgotLoading}
+                    className="w-2/3 py-2 bg-slate-900 text-white rounded text-xs font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-70"
+                  >
+                    {forgotLoading ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>กำลังบันทึก...</span>
+                      </>
+                    ) : (
+                      <span>บันทึกรหัสผ่านใหม่</span>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-

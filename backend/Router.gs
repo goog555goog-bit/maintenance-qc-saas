@@ -6,7 +6,12 @@ const Router = {
     let userContext = null;
     
     // Actions that do not require auth
-    const publicActions = ['auth.login'];
+    const publicActions = [
+      'auth.login', 
+      'auth.forgotPassword', 
+      'auth.resetPassword', 
+      'system.ping'
+    ];
     
     if (publicActions.indexOf(action) === -1) {
       userContext = Auth.verifyToken(token);
@@ -16,10 +21,19 @@ const Router = {
     }
 
     switch (action) {
+      case 'system.ping':
+        return { status: 'OK', message: 'System is online', timestamp: new Date().toISOString() };
+        
       case 'auth.login':
         return Auth.login(payload);
       case 'auth.logout':
         return Auth.logout(token);
+      case 'auth.forgotPassword':
+        return Auth.forgotPassword(payload);
+      case 'auth.resetPassword':
+        return Auth.resetPassword(payload);
+      case 'auth.updateProfile':
+        return Auth.updateProfile(payload, userContext);
         
       case 'ticket.create':
         return TicketService.createTicket(payload, userContext);
@@ -48,3 +62,4 @@ const Router = {
     }
   }
 };
+

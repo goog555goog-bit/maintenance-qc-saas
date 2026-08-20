@@ -9,7 +9,8 @@ const TARGET_SPREADSHEET_ID = "ใส่_SPREADSHEET_ID_ของคุณที
 function initDatabase() {
   const schema = {
     "sheets": [
-      { "name": "Users", "columns": ["user_id", "username", "password_hash", "salt", "role", "active"] },
+      { "name": "Users", "columns": ["user_id", "username", "email", "password_hash", "salt", "role", "active"] },
+      { "name": "Password_Resets", "columns": ["reset_id", "user_id", "email", "otp_code", "expires_at", "used", "created_at"] },
       { "name": "Branches", "columns": ["branch_id", "branch_name", "location_lat", "location_lng", "status"] },
       { "name": "Teams", "columns": ["team_id", "team_name", "status"] },
       { "name": "Fuel_Rates", "columns": ["rate_id", "effective_date", "rate_per_km", "created_by", "created_at", "status"] },
@@ -100,5 +101,21 @@ function initDatabase() {
     }
   }
 
-  Logger.log("Database initialized successfully with 24 sheets!");
+  // เพิ่มผู้ใช้งานเริ่มต้น (ถ้าชีต Users ยังไม่มีข้อมูล)
+  const usersSheet = ss.getSheetByName("Users");
+  if (usersSheet && usersSheet.getLastRow() <= 1) {
+    const salt = Utilities.getUuid();
+    // Default initial accounts with user_id as initial password
+    const defaultUsers = [
+      ["EMP-0001", "EMP-0001", "", Security ? Security.hashPassword("EMP-0001", salt) : "", salt, "CENTRAL_ADMIN", "TRUE"],
+      ["EMP-0002", "EMP-0002", "", Security ? Security.hashPassword("EMP-0002", salt) : "", salt, "BRANCH_MANAGER", "TRUE"],
+      ["EMP-0003", "EMP-0003", "", Security ? Security.hashPassword("EMP-0003", salt) : "", salt, "TECHNICIAN", "TRUE"]
+    ];
+    defaultUsers.forEach(function(row) {
+      usersSheet.appendRow(row);
+    });
+    Logger.log("Seeded default users (EMP-0001, EMP-0002, EMP-0003) with user_id as initial password.");
+  }
+
+  Logger.log("Database initialized successfully with 25 sheets!");
 }
