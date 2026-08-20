@@ -2,7 +2,7 @@ import React from 'react';
 
 export default function DataTable({ columns, data }) {
   if (!data || data.length === 0) {
-    return <div className="p-8 text-center text-text-muted border border-border rounded-lg bg-surface">No data available</div>;
+    return <div className="p-8 text-center text-text-muted border border-border rounded-lg bg-surface">ไม่มีข้อมูล</div>;
   }
   return (
     <div className="overflow-x-auto border border-border rounded-lg bg-surface">

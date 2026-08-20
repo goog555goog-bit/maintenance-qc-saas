@@ -87,10 +87,10 @@ export default function Login({ setRole }) {
             <ShieldCheck className="w-6 h-6 text-blue-400" />
           </div>
           <h1 className="text-xl font-bold tracking-tight text-slate-900">
-            Maintenance & Quality Control
+            ระบบจัดการงานซ่อมบำรุงและควบคุมคุณภาพ
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Enterprise Operations & Dispatch Platform
+            แพลตฟอร์มบริหารงานซ่อมและติดตามงานภาคสนาม
           </p>
         </div>
 
@@ -107,7 +107,7 @@ export default function Login({ setRole }) {
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
-                Username / Employee ID
+                รหัสพนักงาน / อีเมล
               </label>
               <div className="relative">
                 <User className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
@@ -126,7 +126,7 @@ export default function Login({ setRole }) {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">
-                  Password
+                  รหัสผ่าน
                 </label>
               </div>
               <div className="relative">
@@ -150,7 +150,7 @@ export default function Login({ setRole }) {
                   onChange={(e) => setRemember(e.target.checked)}
                   className="w-3.5 h-3.5 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
                 />
-                <span className="text-xs text-slate-600 font-medium">Remember Session</span>
+                <span className="text-xs text-slate-600 font-medium">จดจำการเข้าสู่ระบบ</span>
               </label>
             </div>
 
@@ -166,7 +166,7 @@ export default function Login({ setRole }) {
                 </>
               ) : (
                 <>
-                  <span>Authenticate & Enter Workspace</span>
+                  <span>ยืนยันตัวตนเข้าสู่ระบบ</span>
                   <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
                 </>
               )}
@@ -182,10 +182,10 @@ export default function Login({ setRole }) {
             >
               <span className="flex items-center gap-1.5">
                 <Settings2 className="w-3.5 h-3.5 text-slate-400" />
-                <span>API Endpoint Configuration</span>
+                <span>ตั้งค่าจุดเชื่อมต่อ API</span>
               </span>
               <span className="text-[10px] text-slate-400">
-                {getGasUrl() ? 'Configured' : 'Required'}
+                {getGasUrl() ? 'บันทึกแล้ว' : 'จำเป็นต้องระบุ'}
               </span>
             </button>
 
@@ -193,7 +193,7 @@ export default function Login({ setRole }) {
               <form onSubmit={handleSaveApiUrl} className="mt-3 p-3 bg-slate-50 rounded border border-slate-200 text-xs space-y-2">
                 <div>
                   <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
-                    Google Apps Script Web App URL
+                    URL ของ Google Apps Script Web App
                   </label>
                   <input
                     type="url"
@@ -209,7 +209,7 @@ export default function Login({ setRole }) {
                     type="submit"
                     className="px-3 py-1 bg-slate-900 text-white rounded text-[11px] font-semibold hover:bg-slate-800 transition-colors"
                   >
-                    {configSaved ? 'Saved!' : 'Save URL'}
+                    {configSaved ? 'บันทึกแล้ว!' : 'บันทึก URL'}
                   </button>
                 </div>
               </form>
@@ -220,7 +220,7 @@ export default function Login({ setRole }) {
         {/* Security Footer */}
         <div className="text-center mt-6 text-[11px] text-slate-400 flex items-center justify-center gap-2">
           <KeyRound className="w-3.5 h-3.5" />
-          <span>Historical RBAC & Multi-layer Audit Enabled</span>
+          <span>ระบบรองรับ RBAC และ Audit Trail แบบหลายระดับ</span>
         </div>
       </div>
     </div>

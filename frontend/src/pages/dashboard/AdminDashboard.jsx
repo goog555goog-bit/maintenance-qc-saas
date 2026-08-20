@@ -1,91 +1,82 @@
-import React from 'react';
-import { Activity, AlertCircle, CheckCircle, Clock, FileText, XCircle } from 'lucide-react';
+import React, { useState } from 'react';
 
-export default function AdminDashboard() {
+const AdminDashboard = () => {
+  const [metrics, setMetrics] = useState({
+    newTickets: 0,
+    waitingAssign: 0,
+    inProgress: 0,
+    waitingReview: 0,
+    rework: 0,
+    completedToday: 0
+  });
+
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-slate-800 mb-6">Admin Dashboard</h1>
+    <div className="admin-dashboard p-6">
+      <h1 className="text-2xl font-bold mb-4">แดชบอร์ดผู้ดูแลระบบส่วนกลาง</h1>
       
-      {/* Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex items-center justify-between">
-          <div>
-            <p className="text-sm text-slate-500 font-medium">New Tickets</p>
-            <p className="text-2xl font-bold text-slate-800">12</p>
-          </div>
-          <FileText className="text-blue-500 h-8 w-8" />
+      <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="metric-card bg-blue-100 p-4 rounded shadow">
+          <h3>ใบงานแจ้งใหม่</h3>
+          <p className="text-xl">{metrics.newTickets}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex items-center justify-between">
-          <div>
-            <p className="text-sm text-slate-500 font-medium">In Progress</p>
-            <p className="text-2xl font-bold text-slate-800">24</p>
-          </div>
-          <Activity className="text-blue-500 h-8 w-8" />
+        <div className="metric-card bg-yellow-100 p-4 rounded shadow">
+          <h3>รอจัดสรรทีมช่าง</h3>
+          <p className="text-xl">{metrics.waitingAssign}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex items-center justify-between">
-          <div>
-            <p className="text-sm text-slate-500 font-medium">Waiting Review</p>
-            <p className="text-2xl font-bold text-slate-800">8</p>
-          </div>
-          <Clock className="text-amber-500 h-8 w-8" />
+        <div className="metric-card bg-indigo-100 p-4 rounded shadow">
+          <h3>กำลังดำเนินงาน</h3>
+          <p className="text-xl">{metrics.inProgress}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex items-center justify-between">
-          <div>
-            <p className="text-sm text-slate-500 font-medium">Rejected</p>
-            <p className="text-2xl font-bold text-slate-800">3</p>
-          </div>
-          <XCircle className="text-red-500 h-8 w-8" />
+        <div className="metric-card bg-orange-100 p-4 rounded shadow">
+          <h3>รอผู้จัดการตรวจรับ</h3>
+          <p className="text-xl">{metrics.waitingReview}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex items-center justify-between">
-          <div>
-            <p className="text-sm text-slate-500 font-medium">Closed Today</p>
-            <p className="text-2xl font-bold text-slate-800">15</p>
-          </div>
-          <CheckCircle className="text-green-500 h-8 w-8" />
+        <div className="metric-card bg-red-100 p-4 rounded shadow">
+          <h3>งานตีกลับ (Rework)</h3>
+          <p className="text-xl">{metrics.rework}</p>
+        </div>
+        <div className="metric-card bg-green-100 p-4 rounded shadow">
+          <h3>ปิดงานสำเร็จวันนี้</h3>
+          <p className="text-xl">{metrics.completedToday}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
-          <h2 className="text-lg font-bold text-slate-800 mb-4">Reject Hotspot</h2>
-          <ul className="space-y-3">
-            <li className="flex justify-between items-center p-3 bg-slate-50 rounded border border-slate-100">
-              <div>
-                <p className="font-medium text-slate-800">TCK-2023-001</p>
-                <p className="text-sm text-slate-500">Branch A - HVAC Fix</p>
-              </div>
-              <span className="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded">3 Rejects</span>
-            </li>
-            <li className="flex justify-between items-center p-3 bg-slate-50 rounded border border-slate-100">
-              <div>
-                <p className="font-medium text-slate-800">TCK-2023-042</p>
-                <p className="text-sm text-slate-500">Branch B - Plumbing</p>
-              </div>
-              <span className="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded">4 Rejects</span>
-            </li>
-          </ul>
+      <div className="hotspot-section mb-8 bg-red-50 p-4 rounded border border-red-200">
+        <h2 className="text-xl font-bold text-red-700">ใบงานที่มีการตีกลับซ้ำซ้อน (3 รอบขึ้นไป)</h2>
+        <ul className="mt-2 list-disc pl-5">
+          <li>ไม่มีข้อมูลในขณะนี้</li>
+        </ul>
+      </div>
+
+      <div className="recent-activity">
+        <h2 className="text-xl font-bold mb-4">กิจกรรมล่าสุด</h2>
+        <div className="filters mb-4 flex gap-4">
+          <select className="border p-2 rounded">
+            <option value="">สาขาทั้งหมด</option>
+          </select>
+          <select className="border p-2 rounded">
+            <option value="">สถานะทั้งหมด</option>
+          </select>
         </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
-          <h2 className="text-lg font-bold text-slate-800 mb-4">Recent Activity</h2>
-          <div className="space-y-4">
-            <div className="flex gap-3">
-              <div className="mt-1"><AlertCircle className="h-5 w-5 text-blue-500" /></div>
-              <div>
-                <p className="text-sm font-medium text-slate-800">Ticket TCK-2023-045 submitted</p>
-                <p className="text-xs text-slate-500">2 mins ago</p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <div className="mt-1"><CheckCircle className="h-5 w-5 text-green-500" /></div>
-              <div>
-                <p className="text-sm font-medium text-slate-800">Ticket TCK-2023-040 closed</p>
-                <p className="text-xs text-slate-500">1 hour ago</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="border-b">
+              <th className="p-2">หมายเลขใบงาน</th>
+              <th className="p-2">สาขา</th>
+              <th className="p-2">สถานะ</th>
+              <th className="p-2">ผู้ดำเนินการ</th>
+              <th className="p-2">เวลา</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="p-2" colSpan="5">กำลังโหลดข้อมูล...</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   );
-}
+};
+
+export default AdminDashboard;

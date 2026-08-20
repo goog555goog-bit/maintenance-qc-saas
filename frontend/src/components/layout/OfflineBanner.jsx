@@ -20,7 +20,7 @@ export default function OfflineBanner() {
   return (
     <div className="bg-yellow-500 text-white px-4 py-2 flex items-center justify-center text-sm">
       <WifiOff size={16} className="mr-2" />
-      You are currently offline. Changes will be synced when you reconnect.
+      ขณะนี้คุณออฟไลน์อยู่ การเปลี่ยนแปลงจะถูกซิงค์เมื่อเชื่อมต่อเครือข่ายอีกครั้ง
     </div>
   );
 }

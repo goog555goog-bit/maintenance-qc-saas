@@ -19,21 +19,21 @@ export default function Sidebar({ currentRole = 'tech' }) {
   const location = useLocation();
 
   const navItems = [
-    { label: 'Overview', icon: LayoutDashboard, path: `/dashboard/${currentRole}` },
-    { label: 'Work Orders', icon: Ticket, path: '/tickets', badge: '3' },
-    { label: 'Assignments', icon: Users, path: '/assignments', adminOnly: true },
-    { label: 'Branches', icon: Building2, path: '/branches', adminOnly: true },
-    { label: 'Fuel & Mileage', icon: Fuel, path: '/fuel/review', adminOnly: true },
-    { label: 'Reports', icon: FileText, path: '/reports', adminOnly: true },
-    { label: 'Archive', icon: Archive, path: '/archive' },
-    { label: 'Notifications', icon: Bell, path: '/notifications', badge: '2' },
-    { label: 'Settings', icon: Settings, path: '/settings', adminOnly: true },
+    { label: 'ภาพรวมแดชบอร์ด', icon: LayoutDashboard, path: `/dashboard/${currentRole}` },
+    { label: 'รายการใบงานแจ้งซ่อม', icon: Ticket, path: '/tickets', badge: '3' },
+    { label: 'จัดสรรทีมช่าง', icon: Users, path: '/assignments', adminOnly: true },
+    { label: 'ข้อมูลสาขา', icon: Building2, path: '/branches', adminOnly: true },
+    { label: 'ค่าน้ำมันและระยะทาง', icon: Fuel, path: '/fuel/review', adminOnly: true },
+    { label: 'รายงานสถิติ', icon: FileText, path: '/reports', adminOnly: true },
+    { label: 'คลังประวัติใบงาน', icon: Archive, path: '/archive' },
+    { label: 'การแจ้งเตือน', icon: Bell, path: '/notifications', badge: '2' },
+    { label: 'ตั้งค่าระบบ', icon: Settings, path: '/settings', adminOnly: true },
   ];
 
   const roleLabels = {
-    admin: { title: 'Central Admin', tag: 'ADMIN', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-    manager: { title: 'Branch Manager', tag: 'MANAGER', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-    tech: { title: 'Field Technician', tag: 'TECH-A', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+    admin: { title: 'ผู้ดูแลระบบส่วนกลาง (ADMIN)', tag: 'ADMIN', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+    manager: { title: 'ผู้จัดการสาขา (MANAGER)', tag: 'MANAGER', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    tech: { title: 'ช่างเทคนิคภาคสนาม (TECH)', tag: 'TECH-A', color: 'bg-blue-50 text-blue-700 border-blue-200' },
   };
 
   const roleInfo = roleLabels[currentRole] || roleLabels.tech;
@@ -48,7 +48,7 @@ export default function Sidebar({ currentRole = 'tech' }) {
           </div>
           <div>
             <div className="text-xs font-bold text-slate-900 tracking-tight leading-none">QC SAAS</div>
-            <div className="text-[10px] text-slate-500 font-mono leading-tight">Enterprise Ops</div>
+            <div className="text-[10px] text-slate-500 font-mono leading-tight">ระบบบริหารงานซ่อม</div>
           </div>
         </div>
         <span className="w-2 h-2 rounded-full bg-emerald-500 ring-4 ring-emerald-500/10" title="System Online" />
@@ -57,7 +57,7 @@ export default function Sidebar({ currentRole = 'tech' }) {
       {/* Navigation Links */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         <div className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-          Operations
+          เมนูหลัก
         </div>
         {navItems.map((item) => {
           if (item.adminOnly && currentRole !== 'admin') return null;
@@ -108,7 +108,7 @@ export default function Sidebar({ currentRole = 'tech' }) {
           <Link
             to="/login"
             className="p-1.5 text-slate-400 hover:text-slate-700 rounded hover:bg-slate-100 transition-colors shrink-0"
-            title="Sign out"
+            title="ออกจากระบบ"
           >
             <LogOut className="w-4 h-4" />
           </Link>
