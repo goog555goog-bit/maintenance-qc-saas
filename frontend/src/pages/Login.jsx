@@ -28,13 +28,6 @@ export default function Login({ setRole }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // API Config modal state
-  const [showConfig, setShowConfig] = useState(false);
-  const [customApiUrl, setCustomApiUrl] = useState(getGasUrl() || '');
-  const [configSaved, setConfigSaved] = useState(false);
-  const [testingConnection, setTestingConnection] = useState(false);
-  const [testResult, setTestResult] = useState(null);
-
   // Forgot Password / OTP modal state
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [forgotStep, setForgotStep] = useState(1); // 1: Request OTP, 2: Verify & Reset
@@ -48,68 +41,9 @@ export default function Login({ setRole }) {
   const [forgotError, setForgotError] = useState('');
   const [forgotSuccess, setForgotSuccess] = useState('');
 
-  const handleTestConnection = async () => {
-    if (!customApiUrl || !customApiUrl.startsWith('https://script.google.com/')) {
-      setTestResult({
-        success: false,
-        message: 'กรุณากรอก Google Apps Script URL ที่ถูกต้อง (ขึ้นต้นด้วย https://script.google.com/...)'
-      });
-      return;
-    }
-
-    setTestingConnection(true);
-    setTestResult(null);
-
-    try {
-      const res = await fetch(customApiUrl.trim(), {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'system.ping', payload: {} })
-      });
-
-      const data = await res.json();
-      if (data && (data.success || data.status === 'OK' || data.result || data.data)) {
-        setTestResult({
-          success: true,
-          message: 'เชื่อมต่อสำเร็จ! Google Apps Script Backend ออนไลน์และพร้อมรับคำสั่ง'
-        });
-      } else {
-        setTestResult({
-          success: true,
-          message: 'เชื่อมต่อกับ Google Apps Script ได้แล้ว (ระบบตอบกลับเรียบร้อย)'
-        });
-      }
-    } catch (err) {
-      setTestResult({
-        success: false,
-        message: 'เชื่อมต่อไม่สำเร็จ: โปรดตรวจว่าตอน Deploy ใน Apps Script ได้เลือก Who has access เป็น "Anyone" หรือยัง'
-      });
-    } finally {
-      setTestingConnection(false);
-    }
-  };
-
-  const handleSaveApiUrl = (e) => {
-    e.preventDefault();
-    setGasUrl(customApiUrl);
-    setConfigSaved(true);
-    setTimeout(() => {
-      setConfigSaved(false);
-      setShowConfig(false);
-    }, 1200);
-  };
-
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
-
-    const currentUrl = getGasUrl();
-    if (!currentUrl) {
-      setError('กรุณาตั้งค่า Google Apps Script Web App URL ก่อนเข้าสู่ระบบ (กดไอคอนเฟืองด้านล่าง)');
-      setShowConfig(true);
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -319,81 +253,6 @@ export default function Login({ setRole }) {
               )}
             </button>
           </form>
-
-          {/* API URL Config Collapsible */}
-          <div className="mt-5 pt-4 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => setShowConfig(!showConfig)}
-              className="w-full flex items-center justify-between text-[11px] font-medium text-slate-500 hover:text-slate-800 transition-colors"
-            >
-              <span className="flex items-center gap-1.5">
-                <Settings2 className="w-3.5 h-3.5 text-slate-400" />
-                <span>ตั้งค่าจุดเชื่อมต่อ API</span>
-              </span>
-              <span className="text-[10px] text-slate-400">
-                {getGasUrl() ? 'เชื่อมต่อแล้ว' : 'จำเป็นต้องระบุ'}
-              </span>
-            </button>
-
-            {showConfig && (
-              <div className="mt-3 p-3.5 bg-slate-50 rounded-lg border border-slate-200 text-xs space-y-3">
-                <div>
-                  <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
-                    URL ของ Google Apps Script Web App
-                  </label>
-                  <input
-                    type="url"
-                    value={customApiUrl}
-                    onChange={(e) => setCustomApiUrl(e.target.value)}
-                    placeholder="https://script.google.com/macros/s/.../exec"
-                    className="w-full rounded border border-slate-300 py-1.5 px-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 outline-none font-mono"
-                    required
-                  />
-                </div>
-
-                {/* Test Result Message */}
-                {testResult && (
-                  <div className={`p-2.5 rounded text-xs flex items-start gap-2 border ${
-                    testResult.success
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                      : 'bg-rose-50 text-rose-800 border-rose-200'
-                  }`}>
-                    {testResult.success ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    ) : (
-                      <XCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                    )}
-                    <span className="leading-relaxed">{testResult.message}</span>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={handleTestConnection}
-                    disabled={testingConnection || !customApiUrl}
-                    className="px-3 py-1.5 bg-white text-slate-700 border border-slate-300 rounded text-[11px] font-semibold hover:bg-slate-50 transition-colors flex items-center gap-1.5 disabled:opacity-60"
-                  >
-                    {testingConnection ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-500" />
-                    ) : (
-                      <Activity className="w-3.5 h-3.5 text-blue-600" />
-                    )}
-                    <span>{testingConnection ? 'กำลังทดสอบ...' : 'ทดสอบการเชื่อมต่อ'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleSaveApiUrl}
-                    className="px-3 py-1.5 bg-slate-900 text-white rounded text-[11px] font-semibold hover:bg-slate-800 transition-colors"
-                  >
-                    {configSaved ? 'บันทึกแล้ว!' : 'บันทึก URL'}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Security Footer */}
