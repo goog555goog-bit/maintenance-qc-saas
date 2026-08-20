@@ -1,0 +1,7 @@
+﻿{
+  "name": "maintenance-qc-saas-root",
+  "private": true,
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build"
+  }
+}
