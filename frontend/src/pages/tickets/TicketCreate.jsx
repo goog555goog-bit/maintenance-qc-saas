@@ -1,6 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Camera, AlertCircle, Loader2, Tag, Edit3 } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Plus, 
+  Trash2, 
+  Camera, 
+  AlertCircle, 
+  Loader2, 
+  Edit3, 
+  Search, 
+  ChevronDown, 
+  X, 
+  Building2, 
+  Check 
+} from 'lucide-react';
 import { apiCall } from '@/core/api';
 
 export default function TicketCreate() {
@@ -9,7 +22,12 @@ export default function TicketCreate() {
   const [branches, setBranches] = useState([]);
   const [categories, setCategories] = useState([]);
   
+  // Searchable Branch Dropdown state
   const [selectedBranch, setSelectedBranch] = useState('');
+  const [branchSearch, setBranchSearch] = useState('');
+  const [isBranchOpen, setIsBranchOpen] = useState(false);
+  const branchDropdownRef = useRef(null);
+
   const [priority, setPriority] = useState('NORMAL');
   const [overview, setOverview] = useState('');
 
@@ -43,6 +61,29 @@ export default function TicketCreate() {
     };
     fetchData();
   }, []);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (branchDropdownRef.current && !branchDropdownRef.current.contains(e.target)) {
+        setIsBranchOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filter branches by search query
+  const filteredBranches = branches.filter(b => {
+    const query = branchSearch.trim().toLowerCase();
+    if (!query) return true;
+    const nameMatch = b.branch_name && String(b.branch_name).toLowerCase().includes(query);
+    const idMatch = b.branch_id && String(b.branch_id).toLowerCase().includes(query);
+    const addrMatch = b.address && String(b.address).toLowerCase().includes(query);
+    return nameMatch || idMatch || addrMatch;
+  });
+
+  const selectedBranchObj = branches.find(b => b.branch_id === selectedBranch);
 
   // Add new repair point
   const addLocation = () => {
@@ -235,21 +276,121 @@ export default function TicketCreate() {
           <h2 className="text-base font-bold text-slate-800 border-b border-slate-100 pb-3">ข้อมูลพื้นฐานของใบงาน</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+            {/* SEARCHABLE BRANCH DROPDOWN */}
+            <div className="relative" ref={branchDropdownRef}>
               <label className="block text-xs font-semibold text-slate-700 mb-1">สาขาที่เกิดปัญหา *</label>
-              <select 
-                value={selectedBranch}
-                onChange={(e) => setSelectedBranch(e.target.value)}
-                required
-                className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white"
+              
+              {/* Trigger Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsBranchOpen(!isBranchOpen);
+                  setBranchSearch('');
+                }}
+                className={`w-full border rounded-lg p-2.5 text-sm flex items-center justify-between transition-all bg-white text-left ${
+                  isBranchOpen 
+                    ? 'border-blue-500 ring-2 ring-blue-100' 
+                    : selectedBranch ? 'border-slate-300' : 'border-slate-300 text-slate-400'
+                }`}
               >
-                <option value="">-- เลือกสาขา --</option>
-                {branches.map(b => (
-                  <option key={b.branch_id} value={b.branch_id}>
-                    {b.branch_name} ({b.branch_id})
-                  </option>
-                ))}
-              </select>
+                <div className="flex items-center gap-2 truncate">
+                  <Building2 className="w-4 h-4 text-slate-400 shrink-0" />
+                  {selectedBranchObj ? (
+                    <span className="text-slate-800 font-medium truncate">
+                      {selectedBranchObj.branch_name}{' '}
+                      <span className="text-xs text-slate-400 font-mono font-normal">
+                        ({selectedBranchObj.branch_id})
+                      </span>
+                    </span>
+                  ) : (
+                    <span>-- ค้นหาหรือเลือกสาขา --</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 shrink-0 ml-2">
+                  {selectedBranch && (
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedBranch('');
+                      }}
+                      className="p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
+                      title="ล้างค่าที่เลือก"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </span>
+                  )}
+                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isBranchOpen ? 'rotate-180 text-blue-600' : ''}`} />
+                </div>
+              </button>
+
+              {/* Dropdown Popup Menu */}
+              {isBranchOpen && (
+                <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden">
+                  {/* Search Input Box */}
+                  <div className="p-2 border-b border-slate-100 bg-slate-50/70 flex items-center gap-2">
+                    <Search className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
+                    <input
+                      type="text"
+                      autoFocus
+                      placeholder="พิมพ์ชื่อสาขา, รหัสสาขา หรือที่อยู่..."
+                      value={branchSearch}
+                      onChange={(e) => setBranchSearch(e.target.value)}
+                      className="w-full bg-transparent text-xs text-slate-800 placeholder-slate-400 outline-none p-1"
+                    />
+                    {branchSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setBranchSearch('')}
+                        className="text-slate-400 hover:text-slate-600 p-0.5"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Branch Items List */}
+                  <div className="max-h-60 overflow-y-auto divide-y divide-slate-50">
+                    {filteredBranches.length > 0 ? (
+                      filteredBranches.map((b) => {
+                        const isSelected = b.branch_id === selectedBranch;
+                        return (
+                          <button
+                            key={b.branch_id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedBranch(b.branch_id);
+                              setIsBranchOpen(false);
+                              setBranchSearch('');
+                            }}
+                            className={`w-full px-3.5 py-2.5 text-left text-xs flex items-center justify-between transition-colors ${
+                              isSelected 
+                                ? 'bg-blue-50/80 text-blue-700 font-semibold' 
+                                : 'text-slate-700 hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className="min-w-0 pr-2">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-slate-800">{b.branch_name}</span>
+                                <span className="font-mono text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.2 rounded">
+                                  {b.branch_id}
+                                </span>
+                              </div>
+                              {b.address && (
+                                <p className="text-[11px] text-slate-400 truncate mt-0.5">{b.address}</p>
+                              )}
+                            </div>
+                            {isSelected && <Check className="w-4 h-4 text-blue-600 shrink-0" />}
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <div className="p-4 text-center text-xs text-slate-400">
+                        ไม่พบสาขาที่ตรงกับคำค้นหา "{branchSearch}"
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>
