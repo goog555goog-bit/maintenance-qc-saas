@@ -225,16 +225,37 @@ const Router = {
         return { success: true };
       }
       case 'work_type.item.create': {
-        Validation.requireFields(payload, ['work_type_id', 'item_name']);
-        const itemId = 'WTI-' + Utilities.getUuid().slice(0, 8).toUpperCase();
-        const row = {
-          work_type_item_id: itemId,
-          work_type_id: payload.work_type_id,
-          item_name: Security.sanitizeString(payload.item_name),
-          status: 'ACTIVE'
-        };
-        db.insert('Work_Type_Items', row);
-        return row;
+        Validation.requireFields(payload, ['work_type_id']);
+        const itemsToAdd = [];
+        if (Array.isArray(payload.items)) {
+          payload.items.forEach(function(name) {
+            if (name && String(name).trim()) itemsToAdd.push(String(name).trim());
+          });
+        } else if (payload.item_name) {
+          const rawNames = String(payload.item_name).split(/[\n,]/);
+          rawNames.forEach(function(name) {
+            if (name && String(name).trim()) itemsToAdd.push(String(name).trim());
+          });
+        }
+
+        if (itemsToAdd.length === 0) {
+          throw new Error("กรุณาระบุชื่อประเภทย่อยอย่างน้อย 1 รายการ");
+        }
+
+        const createdRows = [];
+        itemsToAdd.forEach(function(name) {
+          const itemId = 'WTI-' + Utilities.getUuid().slice(0, 8).toUpperCase();
+          const row = {
+            work_type_item_id: itemId,
+            work_type_id: payload.work_type_id,
+            item_name: Security.sanitizeString(name),
+            status: 'ACTIVE'
+          };
+          db.insert('Work_Type_Items', row);
+          createdRows.push(row);
+        });
+
+        return { success: true, count: createdRows.length, items: createdRows };
       }
       case 'work_type.item.update': {
         Validation.requireFields(payload, ['work_type_item_id']);

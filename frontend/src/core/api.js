@@ -30,7 +30,17 @@ export async function apiCall(action, payload = {}) {
       body: JSON.stringify({ action, payload, token })
     });
 
-    const data = await res.json();
+    const text = await res.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (parseErr) {
+      if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+        throw new Error("ไม่สามารถเชื่อมต่อ Google Apps Script ได้ (กรุณาตรวจสอบว่าตั้งค่า Web App Deploy: Execute as = Me และ Who has access = Anyone หรือ URL ถูกต้อง)");
+      }
+      throw new Error("ข้อมูลตอบกลับจากเซิร์ฟเวอร์ไม่ถูกต้อง: " + text.slice(0, 80));
+    }
+
     if (!data.success) {
       if (action !== 'auth.login' && (data.error === 'Unauthorized' || (typeof data.error === 'string' && data.error.includes('Unauthorized')))) {
         localStorage.removeItem('auth_token');

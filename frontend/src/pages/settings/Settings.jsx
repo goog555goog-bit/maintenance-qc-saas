@@ -114,12 +114,25 @@ export default function Settings() {
     setIsLoading(true);
     setError(null);
     try {
+      const parsedItems = newSubItemName
+        .split(/[\n,]/)
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+
+      if (parsedItems.length === 0) {
+        setError('กรุณาระบุชื่อประเภทย่อยอย่างน้อย 1 รายการ');
+        setIsLoading(false);
+        return;
+      }
+
       await apiCall('work_type.item.create', {
         work_type_id: selectedParentWorkType.work_type_id,
-        item_name: newSubItemName.trim()
+        items: parsedItems
       });
       setNewSubItemName('');
       setShowSubItemModal(false);
+      setSuccessMessage(`เพิ่มประเภทย่อยสำเร็จ (${parsedItems.length} รายการ)`);
+      setTimeout(() => setSuccessMessage(''), 3000);
       fetchWorkTypes();
     } catch (err) {
       setError(err.message || 'ไม่สามารถเพิ่มประเภทย่อยได้');
@@ -506,25 +519,37 @@ export default function Settings() {
         </div>
       )}
 
-      {/* MODAL: Sub-item Create */}
+      {/* MODAL: Sub-item Create (Supports Bulk Input) */}
       {showSubItemModal && selectedParentWorkType && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-lg border border-slate-200 max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-slate-800 mb-1">เพิ่มประเภทย่อย</h3>
+            <h3 className="text-lg font-bold text-slate-800 mb-1">เพิ่มประเภทย่อย (เพิ่มได้หลายรายการพร้อมกัน)</h3>
             <p className="text-xs text-slate-500 mb-4">
               ภายใต้หมวดหมู่: <span className="font-semibold text-slate-800">{selectedParentWorkType.work_type_name}</span>
             </p>
             <form onSubmit={handleAddSubItem} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">ชื่อประเภทย่อย / รายการงานซ่อม *</label>
-                <input 
-                  type="text" 
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    ชื่อประเภทย่อย / รายการงานซ่อม *
+                  </label>
+                  {newSubItemName.trim() && (
+                    <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                      ตรวจพบ {newSubItemName.split(/[\n,]/).filter(s => s.trim()).length} รายการ
+                    </span>
+                  )}
+                </div>
+                <textarea 
+                  rows={5}
                   required
-                  placeholder="เช่น แอร์ไม่เย็น, น้ำหยด, ล้างแอร์, หลอดไฟขาด"
+                  placeholder={`พิมพ์ได้หลายรายการพร้อมกัน (1 บรรทัดต่อ 1 รายการ หรือคั่นด้วยเครื่องหมายจุลภาค ,) เช่น:\nแอร์ไม่เย็น\nน้ำหยดจากคอยล์เย็น\nคอมเพรสเซอร์เสียงดัง\nล้างฟิลเตอร์\nพัดลมกรงกระรอกไม่หมุน`}
                   value={newSubItemName}
                   onChange={(e) => setNewSubItemName(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                  className="w-full border border-slate-300 rounded-lg p-2.5 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none leading-relaxed"
                 />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  * สามารถกด Enter เพื่อขึ้นบรรทัดใหม่ หรือใส่เครื่องหมายจุลภาค (,) คั่นระหว่างรายการได้
+                </p>
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                 <button 
@@ -539,7 +564,7 @@ export default function Settings() {
                   disabled={isLoading}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
                 >
-                  {isLoading ? 'กำลังบันทึก...' : 'เพิ่มประเภทย่อย'}
+                  {isLoading ? 'กำลังบันทึก...' : 'บันทึกประเภทย่อย'}
                 </button>
               </div>
             </form>
