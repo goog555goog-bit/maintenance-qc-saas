@@ -32,7 +32,7 @@ export async function apiCall(action, payload = {}) {
 
     const data = await res.json();
     if (!data.success) {
-      if (data.error === 'Unauthorized' || (typeof data.error === 'string' && data.error.includes('Unauthorized'))) {
+      if (action !== 'auth.login' && (data.error === 'Unauthorized' || (typeof data.error === 'string' && data.error.includes('Unauthorized')))) {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('auth_user');
         localStorage.removeItem('auth_token_expiry');
