@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiCall } from '../../core/api';
 
 const AdminDashboard = () => {
   const [metrics, setMetrics] = useState({
@@ -9,6 +10,45 @@ const AdminDashboard = () => {
     rework: 0,
     completedToday: 0
   });
+  const [recentTickets, setRecentTickets] = useState([]);
+
+  useEffect(() => {
+    const fetchTickets = async () => {
+      try {
+        const res = await apiCall('ticket.list');
+        const data = res || [];
+        
+        let newT = 0, waitingA = 0, inProg = 0, waitingR = 0, rewk = 0, completed = 0;
+        const today = new Date().toISOString().split('T')[0];
+
+        data.forEach(t => {
+          if (t.status === 'NEW' || t.status === 'SUBMITTED') newT++;
+          if (t.status === 'NEW') waitingA++;
+          if (t.status === 'ASSIGNED' || t.status === 'IN_PROGRESS') inProg++;
+          if (t.status === 'COMPLETED_BY_TECH') waitingR++;
+          if (t.status === 'REJECTED_REWORK') rewk++;
+          if (t.status === 'CLOSED') {
+             const closedDate = new Date(t.updatedAt || t.createdAt || Date.now()).toISOString().split('T')[0];
+             if (closedDate === today) completed++;
+          }
+        });
+
+        setMetrics({
+          newTickets: newT,
+          waitingAssign: waitingA,
+          inProgress: inProg,
+          waitingReview: waitingR,
+          rework: rewk,
+          completedToday: completed
+        });
+        
+        setRecentTickets(data.slice(0, 5));
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchTickets();
+  }, []);
 
   return (
     <div className="admin-dashboard p-8 bg-slate-50 min-h-screen text-slate-900 font-sans">
@@ -72,9 +112,21 @@ const AdminDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td className="py-12 px-4 text-center text-slate-500" colSpan="5">ไม่มีประวัติกิจกรรมล่าสุด</td>
-              </tr>
+              {recentTickets.length > 0 ? (
+                recentTickets.map((t) => (
+                  <tr key={t.id || Math.random()} className="border-b border-slate-100">
+                    <td className="py-3 px-4">{t.ticketNumber || t.id}</td>
+                    <td className="py-3 px-4">{t.branch || '-'}</td>
+                    <td className="py-3 px-4">{t.status}</td>
+                    <td className="py-3 px-4">{t.assignee || '-'}</td>
+                    <td className="py-3 px-4">{t.updatedAt || t.createdAt || '-'}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td className="py-12 px-4 text-center text-slate-500" colSpan="5">ไม่มีประวัติกิจกรรมล่าสุด</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

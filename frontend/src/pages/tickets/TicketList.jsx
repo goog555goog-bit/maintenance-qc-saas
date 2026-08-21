@@ -1,8 +1,52 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { apiCall } from '../../core/api';
 
 const TicketList = () => {
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState('table');
   const [tickets, setTickets] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [workTypes, setWorkTypes] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterBranch, setFilterBranch] = useState('');
+  const [filterTeam, setFilterTeam] = useState('');
+  const [filterWorkType, setFilterWorkType] = useState('');
+  const [filterPriority, setFilterPriority] = useState('');
+  const [filterDate, setFilterDate] = useState('');
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [ticketsRes, branchesRes, workTypesRes] = await Promise.all([
+          apiCall('ticket.list'),
+          apiCall('branch.list'),
+          apiCall('work_type.list').catch(() => ({ data: [] }))
+        ]);
+        if (ticketsRes.success) setTickets(ticketsRes.data);
+        if (branchesRes.success) setBranches(branchesRes.data);
+        if (workTypesRes && workTypesRes.success) setWorkTypes(workTypesRes.data);
+      } catch (err) {
+        console.error('Error fetching ticket data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const filteredTickets = tickets.filter(t => {
+    if (filterStatus && t.status !== filterStatus) return false;
+    if (filterBranch && String(t.branch_id) !== String(filterBranch)) return false;
+    if (filterWorkType && String(t.work_type_id) !== String(filterWorkType)) return false;
+    if (filterPriority && t.priority !== filterPriority) return false;
+    if (filterTeam && String(t.team_id) !== String(filterTeam)) return false;
+    if (filterDate && (!t.created_at || !t.created_at.startsWith(filterDate))) return false;
+    return true;
+  });
 
   return (
     <div className="ticket-list p-6">
@@ -25,15 +69,42 @@ const TicketList = () => {
       </div>
 
       <div className="filters grid grid-cols-6 gap-2 mb-6">
-        <select className="border p-2 rounded"><option>สถานะ</option></select>
-        <select className="border p-2 rounded"><option>สาขา</option></select>
-        <select className="border p-2 rounded"><option>ทีมช่าง</option></select>
-        <select className="border p-2 rounded"><option>หมวดหมู่</option></select>
-        <select className="border p-2 rounded"><option>ระดับความเร่งด่วน</option></select>
-        <input type="date" className="border p-2 rounded" />
+        <select className="border p-2 rounded" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+          <option value="">สถานะ</option>
+          <option value="NEW">รอจัดสรร</option>
+          <option value="IN_PROGRESS">กำลังดำเนินการ</option>
+          <option value="RESOLVED">รอตรวจรับ</option>
+        </select>
+        <select className="border p-2 rounded" value={filterBranch} onChange={(e) => setFilterBranch(e.target.value)}>
+          <option value="">สาขา</option>
+          {branches.map(b => (
+            <option key={b.branch_id} value={b.branch_id}>{b.name}</option>
+          ))}
+        </select>
+        <select className="border p-2 rounded" value={filterTeam} onChange={(e) => setFilterTeam(e.target.value)}>
+          <option value="">ทีมช่าง</option>
+        </select>
+        <select className="border p-2 rounded" value={filterWorkType} onChange={(e) => setFilterWorkType(e.target.value)}>
+          <option value="">หมวดหมู่</option>
+          {workTypes.map(wt => (
+            <option key={wt.work_type_id} value={wt.work_type_id}>{wt.name}</option>
+          ))}
+        </select>
+        <select className="border p-2 rounded" value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)}>
+          <option value="">ระดับความเร่งด่วน</option>
+          <option value="LOW">ต่ำ</option>
+          <option value="NORMAL">ปกติ</option>
+          <option value="HIGH">สูง</option>
+          <option value="URGENT">ด่วนที่สุด</option>
+        </select>
+        <input type="date" className="border p-2 rounded" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} />
       </div>
 
-      {viewMode === 'table' ? (
+      {loading ? (
+        <div className="flex justify-center items-center py-20">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+        </div>
+      ) : viewMode === 'table' ? (
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse border">
             <thead className="bg-gray-50">
@@ -49,7 +120,7 @@ const TicketList = () => {
               </tr>
             </thead>
             <tbody>
-              {tickets.length === 0 ? (
+              {filteredTickets.length === 0 ? (
                 <tr>
                   <td colSpan="8" className="p-8 text-center">
                     <div className="flex flex-col items-center justify-center">
@@ -59,9 +130,20 @@ const TicketList = () => {
                   </td>
                 </tr>
               ) : (
-                tickets.map(ticket => (
-                  <tr key={ticket.id}>
-                    <td colSpan="8">...</td>
+                filteredTickets.map(ticket => (
+                  <tr 
+                    key={ticket.ticket_id} 
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onClick={() => navigate('/tickets/' + ticket.ticket_id)}
+                  >
+                    <td className="p-3 border-b">{ticket.ticket_id}</td>
+                    <td className="p-3 border-b">{ticket.branch_name || ticket.branch_id}</td>
+                    <td className="p-3 border-b">{ticket.work_type_name || ticket.work_type_id}</td>
+                    <td className="p-3 border-b">{ticket.status}</td>
+                    <td className="p-3 border-b">{ticket.team_name || ticket.team_id || '-'}</td>
+                    <td className="p-3 border-b">{ticket.created_at ? new Date(ticket.created_at).toLocaleDateString() : '-'}</td>
+                    <td className="p-3 border-b">{ticket.priority}</td>
+                    <td className="p-3 border-b">-</td>
                   </tr>
                 ))
               )}
@@ -72,20 +154,41 @@ const TicketList = () => {
         <div className="kanban-board flex gap-4">
           <div className="kanban-column flex-1 bg-gray-50 p-4 rounded min-h-[400px]">
             <h3 className="font-bold border-b pb-2 mb-4">รอจัดสรร</h3>
-            {tickets.filter(t => t.status === 'รอจัดสรร').length === 0 && (
+            {filteredTickets.filter(t => t.status === 'NEW' || t.status === 'รอจัดสรร').length === 0 ? (
               <p className="text-center text-gray-500 mt-8">ยังไม่มีข้อมูลใบงาน</p>
+            ) : (
+              filteredTickets.filter(t => t.status === 'NEW' || t.status === 'รอจัดสรร').map(ticket => (
+                <div key={ticket.ticket_id} className="bg-white p-3 rounded shadow mb-3 cursor-pointer" onClick={() => navigate('/tickets/' + ticket.ticket_id)}>
+                  <div className="font-bold">{ticket.ticket_id}</div>
+                  <div className="text-sm text-gray-600">{ticket.branch_name || ticket.branch_id}</div>
+                </div>
+              ))
             )}
           </div>
           <div className="kanban-column flex-1 bg-gray-50 p-4 rounded min-h-[400px]">
             <h3 className="font-bold border-b pb-2 mb-4">กำลังดำเนินการ</h3>
-            {tickets.filter(t => t.status === 'กำลังดำเนินการ').length === 0 && (
+            {filteredTickets.filter(t => t.status === 'IN_PROGRESS' || t.status === 'กำลังดำเนินการ').length === 0 ? (
               <p className="text-center text-gray-500 mt-8">ยังไม่มีข้อมูลใบงาน</p>
+            ) : (
+              filteredTickets.filter(t => t.status === 'IN_PROGRESS' || t.status === 'กำลังดำเนินการ').map(ticket => (
+                <div key={ticket.ticket_id} className="bg-white p-3 rounded shadow mb-3 cursor-pointer" onClick={() => navigate('/tickets/' + ticket.ticket_id)}>
+                  <div className="font-bold">{ticket.ticket_id}</div>
+                  <div className="text-sm text-gray-600">{ticket.branch_name || ticket.branch_id}</div>
+                </div>
+              ))
             )}
           </div>
           <div className="kanban-column flex-1 bg-gray-50 p-4 rounded min-h-[400px]">
             <h3 className="font-bold border-b pb-2 mb-4">รอตรวจรับ</h3>
-            {tickets.filter(t => t.status === 'รอตรวจรับ').length === 0 && (
+            {filteredTickets.filter(t => t.status === 'RESOLVED' || t.status === 'รอตรวจรับ').length === 0 ? (
               <p className="text-center text-gray-500 mt-8">ยังไม่มีข้อมูลใบงาน</p>
+            ) : (
+              filteredTickets.filter(t => t.status === 'RESOLVED' || t.status === 'รอตรวจรับ').map(ticket => (
+                <div key={ticket.ticket_id} className="bg-white p-3 rounded shadow mb-3 cursor-pointer" onClick={() => navigate('/tickets/' + ticket.ticket_id)}>
+                  <div className="font-bold">{ticket.ticket_id}</div>
+                  <div className="text-sm text-gray-600">{ticket.branch_name || ticket.branch_id}</div>
+                </div>
+              ))
             )}
           </div>
         </div>

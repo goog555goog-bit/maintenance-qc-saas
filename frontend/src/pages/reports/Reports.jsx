@@ -1,8 +1,68 @@
-import React, { useState } from 'react';
-import { Download, Calendar, BarChart2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Download, Calendar, BarChart2, Loader2 } from 'lucide-react';
+import { apiCall } from '@/core/api';
 
 export default function Reports() {
   const [reportData, setReportData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const res = await apiCall('ticket.list');
+      const tickets = res.tickets || res.data || [];
+      
+      const teamsMap = {};
+      tickets.forEach(t => {
+        const teamName = t.team || 'ไม่มีทีม';
+        if (!teamsMap[teamName]) {
+          teamsMap[teamName] = {
+            team: teamName,
+            totalCompleted: 0,
+            rework: 0,
+            firstTimeFix: 0,
+            qualitySum: 0,
+            qualityCount: 0
+          };
+        }
+        
+        if (t.status === 'CLOSED' || t.status === 'ARCHIVED') {
+          teamsMap[teamName].totalCompleted += 1;
+          
+          if (t.reworkCount > 0 || t.isRework) {
+            teamsMap[teamName].rework += 1;
+          } else {
+            teamsMap[teamName].firstTimeFix += 1;
+          }
+          
+          if (t.rating) {
+            teamsMap[teamName].qualitySum += Number(t.rating);
+            teamsMap[teamName].qualityCount += 1;
+          }
+        }
+      });
+
+      const processedData = Object.values(teamsMap).filter(t => t.totalCompleted > 0).map(t => {
+        return {
+          team: t.team,
+          completed: t.totalCompleted,
+          firstTimeFixRate: (t.firstTimeFix / t.totalCompleted) * 100,
+          reworkRate: (t.rework / t.totalCompleted) * 100,
+          avgRating: t.qualityCount > 0 ? (t.qualitySum / t.qualityCount).toFixed(1) : '-'
+        };
+      });
+
+      setReportData(processedData);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="p-6">
@@ -21,8 +81,13 @@ export default function Reports() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 min-h-[350px] flex flex-col">
           <h2 className="text-lg font-bold text-slate-800 mb-4">สถานะใบงานทั้งหมด</h2>
-          {reportData.length > 0 ? (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center flex-1 text-slate-500">
+              <Loader2 className="h-8 w-8 animate-spin text-slate-300 mb-2" />
+            </div>
+          ) : reportData.length > 0 ? (
              <div className="flex-1 flex items-end justify-around gap-2 pb-6 border-b border-slate-200 relative">
+                {/* Chart placeholder */}
              </div>
           ) : (
             <div className="flex flex-col items-center justify-center flex-1 text-slate-500">
@@ -35,8 +100,16 @@ export default function Reports() {
 
         <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 min-h-[350px] flex flex-col">
           <h2 className="text-lg font-bold text-slate-800 mb-4">คะแนนประเมินคุณภาพเฉลี่ย</h2>
-          {reportData.length > 0 ? (
-            <div className="flex flex-col flex-1 justify-center">
+          {loading ? (
+             <div className="flex flex-col items-center justify-center flex-1 text-slate-500">
+               <Loader2 className="h-8 w-8 animate-spin text-slate-300 mb-2" />
+             </div>
+          ) : reportData.length > 0 ? (
+            <div className="flex flex-col items-center justify-center flex-1">
+              <span className="text-5xl font-bold text-blue-600">
+                {reportData.reduce((acc, curr) => acc + (curr.avgRating !== '-' ? Number(curr.avgRating) : 0), 0) / reportData.filter(d => d.avgRating !== '-').length || '-'}
+              </span>
+              <p className="text-sm text-slate-500 mt-2">คะแนนเฉลี่ยจากทุกทีม</p>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center flex-1 text-slate-500">
@@ -60,12 +133,26 @@ export default function Reports() {
                 <th className="pb-3">คะแนนประเมินเฉลี่ย</th>
               </tr>
             </thead>
-            {reportData.length > 0 && (
+            {!loading && reportData.length > 0 && (
               <tbody className="divide-y divide-slate-100 text-sm">
+                {reportData.map((row, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50">
+                    <td className="py-3 text-slate-800 font-medium">{row.team}</td>
+                    <td className="py-3 text-slate-600">{row.completed}</td>
+                    <td className="py-3 text-slate-600">{row.firstTimeFixRate.toFixed(1)}%</td>
+                    <td className="py-3 text-slate-600">{row.reworkRate.toFixed(1)}%</td>
+                    <td className="py-3 text-slate-600">{row.avgRating}</td>
+                  </tr>
+                ))}
               </tbody>
             )}
           </table>
-          {reportData.length === 0 && (
+          {loading && (
+            <div className="flex flex-col items-center justify-center flex-1 py-12 text-slate-500">
+               <Loader2 className="h-8 w-8 animate-spin text-slate-300 mb-2" />
+            </div>
+          )}
+          {!loading && reportData.length === 0 && (
              <div className="flex flex-col items-center justify-center flex-1 py-12 text-slate-500">
                 <p className="text-sm font-medium">ยังไม่มีข้อมูลประสิทธิภาพการทำงาน</p>
              </div>
@@ -75,3 +162,4 @@ export default function Reports() {
     </div>
   );
 }
+
