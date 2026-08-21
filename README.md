@@ -108,14 +108,88 @@
 24. SR-24: Separation of Duty between Admin and Technician
 25. SR-25: Regular security posture review
 
-## 9. Production Checklist
-- [ ] DEV and PROD environments are fully isolated.
-- [ ] No hardcoded URLs in frontend; use environment variables.
-- [ ] Script Properties in PROD contain correct production secrets.
-- [ ] Cloudflare WAF rules configured and tested.
-- [ ] CORS strictly limits requests to the production domain.
-- [ ] Admin accounts created with proper separation of duties.
-- [ ] Initial database structure and master data seeded in PROD Google Sheets.
-- [ ] Audit Log sheet protected against manual editing.
-- [ ] Automated backup schedule verified for Google Sheets.
-- [ ] Deployment pipelines (GitHub -> Cloudflare, clasp) are green.
+## 9. Production Checklist (รายการตรวจสอบก่อนขึ้น Production)
+
+### 9.1 Google Apps Script (Backend)
+
+- [ ] สร้างโปรเจกต์ Google Apps Script ใหม่สำหรับ PROD (แยกจาก DEV)
+- [ ] คัดลอกไฟล์ `.gs` ทั้ง 23 ไฟล์จากโฟลเดอร์ `backend/` ไปวางใน Apps Script Editor
+- [ ] ตั้งค่า Script Properties ให้ครบ:
+  - [ ] `DB_SPREADSHEET_ID` — ID ของ Google Sheets ฐานข้อมูล PROD
+- [ ] Deploy เป็น Web App:
+  - [ ] Execute as: **Me** (บัญชีเจ้าของระบบ)
+  - [ ] Who has access: **Anyone**
+  - [ ] คัดลอก Web App URL (ลงท้ายด้วย `/exec`) เก็บไว้
+- [ ] ทดสอบ `system.ping` ด้วย Postman หรือ `curl` ยืนยันว่าตอบกลับ `{ status: "OK" }`
+- [ ] ตรวจสอบว่า `MailApp.sendEmail` ส่ง OTP ได้จริง (ทดสอบด้วย `auth.forgotPassword`)
+
+### 9.2 Google Sheets (Database)
+
+- [ ] สร้าง Google Sheets ใหม่สำหรับ PROD (ไม่ใช้ชีตเดียวกับ DEV)
+- [ ] รันฟังก์ชัน `initializeDatabase()` จาก Apps Script เพื่อสร้างตารางทั้ง 25 ชีต
+- [ ] ตรวจสอบว่าแถวหัวตาราง (Header Row) ของชีต `Users` ตรงตาม Schema:
+  - `user_id | username | email | password_hash | salt | role | active`
+  - (ระวังสะกดผิด เช่น `password_hasl` ต้องแก้เป็น `password_hash`)
+- [ ] ล็อกชีต `Activity_Log` ไม่ให้แก้ไขด้วยมือ (Protect sheet)
+- [ ] ล็อกชีต `GPS_Logs` ไม่ให้แก้ไขด้วยมือ (Protect sheet)
+- [ ] ตรวจสอบว่าผู้ใช้เริ่มต้น 3 คนถูกสร้างโดย `initializeDatabase()`:
+  - `EMP-0001` (CENTRAL_ADMIN), `EMP-0002` (BRANCH_MANAGER), `EMP-0003` (TECHNICIAN)
+  - รหัสผ่านเริ่มต้นคือรหัสพนักงาน (เช่น `EMP-0001`)
+- [ ] Share ชีตให้บัญชี Apps Script มีสิทธิ์ Editor
+
+### 9.3 Frontend (Cloudflare Pages)
+
+- [ ] อัปเดตไฟล์ `frontend/src/config.js`:
+  - [ ] เปลี่ยน `GAS_API_URL` เป็น Web App URL ของ PROD
+- [ ] รัน `npm run build` ใน `frontend/` และยืนยันว่าบิลด์สำเร็จ (exit code 0, ไม่มี error)
+- [ ] ตรวจสอบว่าโฟลเดอร์ `frontend/dist/` มีไฟล์ครบ:
+  - `index.html`, `favicon.svg`, `assets/index-*.js`, `assets/index-*.css`
+- [ ] Push ขึ้น GitHub `main` branch
+- [ ] ตรวจสอบว่า Cloudflare Pages ทำ Auto Deploy สำเร็จ (Build log สีเขียว)
+- [ ] เปิด Production URL และตรวจสอบว่าหน้า Login โหลดได้ปกติ
+- [ ] ทดสอบ Direct URL Access (เช่น `/dashboard/admin`) ไม่เจอ 404
+
+### 9.4 การเชื่อมต่อ Frontend-Backend
+
+- [ ] เข้าสู่ระบบด้วย `EMP-0001` / `EMP-0001` สำเร็จ (เข้าแดชบอร์ด Admin)
+- [ ] เข้าสู่ระบบด้วย `EMP-0002` / `EMP-0002` สำเร็จ (เข้าแดชบอร์ด Manager)
+- [ ] เข้าสู่ระบบด้วย `EMP-0003` / `EMP-0003` สำเร็จ (เข้าแดชบอร์ด Technician)
+- [ ] ทดสอบ Login ผิดรหัส: ระบบแสดงข้อความ "รหัสผ่านไม่ถูกต้อง"
+- [ ] ทดสอบออกจากระบบ (Logout) แล้วกลับไปหน้า Login
+- [ ] ทดสอบ Token หมดอายุ (8 ชม.) แล้ว Redirect กลับหน้า Login
+
+### 9.5 ความปลอดภัย (Security)
+
+- [ ] เปิด Browser DevTools > Console: ไม่มี Error 404 หรือ Mixed Content
+- [ ] ตรวจสอบว่า `GAS_API_URL` ใน `config.js` ใช้ `https://` เท่านั้น
+- [ ] ทดสอบเรียก API โดยไม่มี Token: ระบบตอบ "Unauthorized"
+- [ ] ตรวจสอบว่า Google Sheets ไม่ได้ Share เป็น Public (ต้อง Share เฉพาะบัญชี Apps Script)
+- [ ] ตรวจสอบว่าไม่มี Secret/Password/API Key ใน Source Code บน GitHub
+- [ ] ตรวจสอบว่า Script Properties ตั้งค่าถูกต้อง (ไม่ใช้ค่า DEV)
+
+### 9.6 ข้อมูลและฐานข้อมูล
+
+- [ ] ชีต PROD ไม่มีข้อมูลทดสอบ (Mock Data) หลงเหลือ
+- [ ] ไฟล์ `database/seed_data.json` ว่างเปล่า (ไม่มี Dummy Users)
+- [ ] ตรวจสอบว่าชีตทั้ง 25 ตารางมี Header Row ครบถ้วนและสะกดถูกต้อง
+- [ ] ตั้ง Frozen Row (แถวแรก) ให้ทุกชีต เพื่อไม่ให้เลื่อนหัวตารางหาย
+
+### 9.7 การสำรองข้อมูลและการกู้คืน
+
+- [ ] ตั้ง Time-driven Trigger ใน Apps Script สำหรับ Backup อัตโนมัติ (รายวัน)
+- [ ] ทดสอบรันฟังก์ชัน Backup ด้วยมือ 1 ครั้ง ตรวจสอบว่าไฟล์ Backup ถูกสร้างใน Drive
+- [ ] กำหนดโฟลเดอร์ Google Drive สำหรับเก็บ Backup แยกต่างหาก
+
+### 9.8 การแจ้งเตือนและอีเมล
+
+- [ ] ทดสอบระบบ "ลืมรหัสผ่าน" จากหน้า Login: ได้รับอีเมล OTP 6 หลัก
+- [ ] ตรวจสอบว่าอีเมลส่งจากบัญชี Google ของเจ้าของ Apps Script
+- [ ] ตรวจสอบ Quota ของ `MailApp`: Free account = 100 อีเมล/วัน, Workspace = 1,500/วัน
+
+### 9.9 สิ่งที่ต้องแจ้งผู้ใช้งาน
+
+- [ ] แจ้งรหัสพนักงานและรหัสผ่านเริ่มต้นให้ Admin คนแรก (`EMP-0001`)
+- [ ] แนะนำให้ Admin เปลี่ยนรหัสผ่านทันทีหลังเข้าสู่ระบบครั้งแรก
+- [ ] แนะนำให้ผู้ใช้ทุกคนผูกอีเมลในหน้า "โปรไฟล์" เพื่อใช้กู้คืนรหัสผ่านด้วย OTP
+- [ ] จัดทำเอกสารแนะนำการใช้งานเบื้องต้นให้ผู้ใช้แต่ละบทบาท (Admin / Manager / Tech)
+
