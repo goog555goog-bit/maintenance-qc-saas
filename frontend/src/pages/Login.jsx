@@ -8,14 +8,11 @@ import {
   KeyRound, 
   AlertCircle, 
   Loader2, 
-  Settings2, 
-  Activity, 
   CheckCircle2, 
-  XCircle,
   Mail,
   X 
 } from 'lucide-react';
-import { apiCall, getGasUrl, setGasUrl } from '@/core/api';
+import { apiCall } from '@/core/api';
 import { useAuth } from '@/core/auth';
 
 export default function Login({ setRole }) {

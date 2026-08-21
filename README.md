@@ -193,3 +193,82 @@
 - [ ] แนะนำให้ผู้ใช้ทุกคนผูกอีเมลในหน้า "โปรไฟล์" เพื่อใช้กู้คืนรหัสผ่านด้วย OTP
 - [ ] จัดทำเอกสารแนะนำการใช้งานเบื้องต้นให้ผู้ใช้แต่ละบทบาท (Admin / Manager / Tech)
 
+### 9.10 UI/UX
+Layout & Responsive
+- [ ]แสดงผลถูกต้องบน Desktop (1024px+)
+- [ ]แสดงผลถูกต้องบน Tablet (768px–1023px)
+- [ ]แสดงผลถูกต้องบน Mobile (< 768px)
+- [ ]ทดสอบ orientation เปลี่ยน (portrait/landscape) บนมือถือ
+- [ ]ทดสอบ breakpoint กลางๆ ที่อาจแตก
+- [ ]ไม่มี horizontal scroll ที่ไม่ตั้งใจ
+- [ ]Layout ไม่พังเมื่อ zoom in/out (75%–150%)
+- [ ]Navigation pattern เหมาะกับแต่ละขนาดจอ (เช่น Sidebar บน Desktop, Bottom nav บน Mobile)
+- [ ] ไม่พบ Emoji ตกค้างในหน้าจอใดเลย (ใช้ SVG Icon เท่านั้น)
+- [ ] Toast notification แสดงผลถูกต้อง (success/error/warning)
+- [ ] Modal ทุกตัวเปิด-ปิดได้ปกติ ไม่ค้าง
+Functionality
+- [ ]ฟีเจอร์หลักทั้งหมดทำงานตาม requirement
+- [ ]Form validation ทำงานถูกต้อง (client + server)
+- [ ]Error handling ครอบคลุม (network error, timeout, 4xx/5xx)
+- [ ]ทดสอบ edge case (ข้อมูลว่าง, ค่าผิดปกติ, สิทธิ์ผู้ใช้ต่างระดับ)
+Component & Visual Consistency
+- [ ]Font, สี, spacing ตรงตาม Design System / Figma
+- [ ]Icon แสดงผลครบ ไม่มีตัวหาย/แตก
+- [ ]Button state ครบ (default, hover, active, disabled, loading)
+- [ ]Form input state ครบ (focus, error, disabled, placeholder)
+- [ ]ความสม่ำเสมอของ margin/padding ระหว่างหน้าต่างๆ
+Performance
+- [ ]ตรวจสอบ Page load time / Lighthouse score
+- [ ]รูปภาพ optimize แล้ว (compress, lazy load)
+- [ ]ไม่มี memory leak หรือ re-render เกินจำเป็น
+- [ ]ตรวจสอบ bundle size
+Security
+- [ ]ไม่มี API key / secret หลุดใน client-side code
+- [ ]HTTPS enforced
+- [ ]Authentication/Authorization ทำงานถูกต้อง
+- [ ] ป้องกัน XSS / SQL Injection / CSRF
+ข้อความยาวไม่ล้น container (overflow/truncate ทำงานถูกต้อง)
+- [ ]รองรับภาษาไทย/อังกฤษ (line-height, การตัดคำ)
+- [ ]ไม่มี placeholder/lorem ipsum หลงเหลือ
+- [ ]Typo และคำผิดตรวจสอบแล้ว
+- [ ]Microcopy (error message, tooltip, CTA) สื่อสารเข้าใจง่าย
+User Flow & Interaction
+- [ ]ทดสอบ user flow หลักตั้งแต่ต้นจนจบ (end-to-end)
+- [ ]จำนวนคลิก/ขั้นตอนไม่มากเกินจำเป็น
+- [ ]Loading state / Skeleton แสดงระหว่างรอข้อมูล
+- [ ]Empty state มี UI รองรับ
+- [ ]Error state แสดงข้อความเข้าใจง่ายพร้อมทางแก้ (เช่น ปุ่ม retry)
+- [ ]Success feedback ชัดเจน (toast, modal, redirect)
+- [ ]Animation/Transition ลื่นไหล ไม่กระตุก
+Forms & Input
+- [ ]Validation ทำงานถูกต้อง (real-time หรือ on submit)
+- [ ]แจ้ง error ตรงจุด เข้าใจง่าย
+- [ ]Autofocus / Tab order เป็นลำดับที่เหมาะสม
+Image & Media
+- [ ]รูปภาพโหลดครบ ไม่มี broken image
+- [ ]Aspect ratio ถูกต้อง ไม่บิดเบี้ยว
+- [ ]Lazy loading ทำงานถูกต้อง
+Cross-Browser & Device Testing
+- [ ]Chrome, Safari, Firefox, Edge
+- [ ]iOS Safari และ Android Chrome
+- [ ] Dark Mode / Light Mode สลับได้ถูกต้อง
+Accessibility (a11y)
+- [ ]Contrast ratio ผ่านเกณฑ์ WCAG AA
+- [ ]Keyboard navigation ใช้งานได้ (Tab, Enter, Esc)
+- [ ]Focus indicator มองเห็นชัดเจน
+- [ ]Alt text สำหรับรูปสำคัญ
+SEO & Accessibility (ถ้าเกี่ยวข้อง)
+- [ ]Meta tags, title, description ครบ
+- [ ]Alt text สำหรับรูปภาพ
+- [ ]Contrast ratio และ keyboard navigation ผ่านเกณฑ์พื้นฐาน
+Infra / Deployment
+- [ ]Environment variables ตั้งค่าถูกต้องสำหรับ production
+- [ ]Database migration รันแล้วและตรวจสอบแล้ว
+- [ ]Backup / Rollback plan พร้อมใช้งาน
+- [ ]Monitoring / Logging (error tracking) เปิดใช้งาน
+- [ ]Domain / SSL certificate ตั้งค่าเรียบร้อย
+Performance (ที่กระทบ UX)
+- [ ]First load ไม่ช้าเกินไป (ตรวจสอบ Lighthouse)
+- [ ]ไม่มี layout shift ระหว่างโหลด (CLS)
+- [ ]Interaction ตอบสนองไว ไม่หน่วง
+

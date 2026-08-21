@@ -110,12 +110,16 @@ const Auth = {
     const identifier = String(payload.identifier).trim();
     
     const db = Database.getInstance();
-    const allUsers = db.query('Users', { active: 'TRUE' });
-    const user = allUsers.find(u => 
-      (u.user_id && u.user_id.toLowerCase() === identifier.toLowerCase()) ||
-      (u.username && u.username.toLowerCase() === identifier.toLowerCase()) ||
-      (u.email && u.email.toLowerCase() === identifier.toLowerCase())
-    );
+    const allUsers = db.query('Users');
+    const user = allUsers.find(u => {
+      const isActive = u.active === undefined || u.active === null || String(u.active).toUpperCase() === 'TRUE';
+      if (!isActive) return false;
+      return (
+        (u.user_id && String(u.user_id).trim().toLowerCase() === identifier.toLowerCase()) ||
+        (u.username && String(u.username).trim().toLowerCase() === identifier.toLowerCase()) ||
+        (u.email && String(u.email).trim().toLowerCase() === identifier.toLowerCase())
+      );
+    });
 
     if (!user) {
       throw new Error("ไม่พบข้อมูลรหัสพนักงานหรืออีเมลนี้ในระบบ");
