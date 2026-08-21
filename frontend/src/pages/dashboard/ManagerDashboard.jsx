@@ -15,7 +15,7 @@ const ManagerDashboard = () => {
     const fetchTickets = async () => {
       try {
         const res = await apiCall('ticket.list');
-        const data = res || [];
+        const data = Array.isArray(res) ? res : (Array.isArray(res?.tickets) ? res.tickets : (Array.isArray(res?.data) ? res.data : []));
         
         let open = 0, waiting = 0, rework = 0, completed = 0;
         const now = new Date();

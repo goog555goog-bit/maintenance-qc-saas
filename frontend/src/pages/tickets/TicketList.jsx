@@ -26,9 +26,10 @@ const TicketList = () => {
           apiCall('branch.list'),
           apiCall('work_type.list').catch(() => ({ data: [] }))
         ]);
-        if (ticketsRes.success) setTickets(ticketsRes.data);
-        if (branchesRes.success) setBranches(branchesRes.data);
-        if (workTypesRes && workTypesRes.success) setWorkTypes(workTypesRes.data);
+        const toArray = (v) => Array.isArray(v) ? v : (Array.isArray(v?.tickets) ? v.tickets : (Array.isArray(v?.data) ? v.data : []));
+        setTickets(toArray(ticketsRes));
+        setBranches(toArray(branchesRes));
+        setWorkTypes(toArray(workTypesRes));
       } catch (err) {
         console.error('Error fetching ticket data:', err);
       } finally {

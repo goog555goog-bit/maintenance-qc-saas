@@ -15,7 +15,7 @@ const TechDashboard = () => {
     const fetchTickets = async () => {
       try {
         const res = await apiCall('ticket.list');
-        const data = res || [];
+        const data = Array.isArray(res) ? res : (Array.isArray(res?.tickets) ? res.tickets : (Array.isArray(res?.data) ? res.data : []));
         
         let assignedCount = 0, urgentCount = 0, completedCount = 0;
         const today = new Date().toISOString().split('T')[0];

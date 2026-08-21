@@ -14,7 +14,7 @@ export default function Reports() {
     setLoading(true);
     try {
       const res = await apiCall('ticket.list');
-      const tickets = res.tickets || res.data || [];
+      const tickets = Array.isArray(res) ? res : (Array.isArray(res?.tickets) ? res.tickets : (Array.isArray(res?.data) ? res.data : []));
       
       const teamsMap = {};
       tickets.forEach(t => {

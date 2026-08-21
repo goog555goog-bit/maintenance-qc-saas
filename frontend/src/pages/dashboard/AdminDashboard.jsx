@@ -16,7 +16,7 @@ const AdminDashboard = () => {
     const fetchTickets = async () => {
       try {
         const res = await apiCall('ticket.list');
-        const data = res || [];
+        const data = Array.isArray(res) ? res : (Array.isArray(res?.tickets) ? res.tickets : (Array.isArray(res?.data) ? res.data : []));
         
         let newT = 0, waitingA = 0, inProg = 0, waitingR = 0, rewk = 0, completed = 0;
         const today = new Date().toISOString().split('T')[0];
