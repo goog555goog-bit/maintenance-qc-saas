@@ -23,7 +23,12 @@ function handleRequest(e) {
       return Utils.errorResponse("No data provided", 400);
     }
 
-    const request = JSON.parse(postData);
+    let request;
+    try {
+      request = JSON.parse(postData);
+    } catch (parseErr) {
+      return Utils.errorResponse("Invalid JSON format: " + parseErr.message, 400);
+    }
     
     // Security: Check for malicious payloads and sanitize
     const sanitizedRequest = Security.sanitizePayload(request);
@@ -41,8 +46,9 @@ function handleRequest(e) {
     return Utils.successResponse(result);
 
   } catch (error) {
-    // Log error
-    AuditService.logError(error);
-    return Utils.errorResponse(error.message || "Internal Server Error", 500);
+    try {
+      AuditService.logError(error);
+    } catch (ignore) {}
+    return Utils.errorResponse(error ? (error.message || String(error)) : "Internal Server Error", 500);
   }
 }

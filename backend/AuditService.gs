@@ -22,14 +22,18 @@ const AuditService = {
   },
   
   logError: function(error) {
-    const db = Database.getInstance();
-    db.insert('Error_Log', {
-      error_id: Utils.generateId('ERR'),
-      timestamp: new Date().toISOString(),
-      user_id: 'SYSTEM',
-      error_message: error.message || String(error),
-      stack_trace: error.stack || '',
-      context_json: '{}'
-    });
+    try {
+      const db = Database.getInstance();
+      db.insert('Error_Log', {
+        error_id: Utils.generateId('ERR'),
+        timestamp: new Date().toISOString(),
+        user_id: 'SYSTEM',
+        error_message: error ? (error.message || String(error)) : 'Unknown error',
+        stack_trace: error ? (error.stack || '') : '',
+        context_json: '{}'
+      });
+    } catch (e) {
+      console.error("Failed to log error: " + e.message);
+    }
   }
 };
