@@ -15,10 +15,27 @@ const TicketService = {
     const db = Database.getInstance();
     const ticketId = Utils.generateTicketId();
     const now = new Date().toISOString();
+
+    // Resolve category/work type name
+    let workTypeId = payload.work_type_id || (payload.items[0] && payload.items[0].work_type_id) || '';
+    let categoryName = payload.category_name || payload.work_type_name || '';
+    if (!categoryName && workTypeId) {
+      const wtList = db.query('Work_Types', { work_type_id: workTypeId });
+      if (wtList.length > 0) categoryName = wtList[0].work_type_name;
+    }
+    if (!categoryName && payload.items[0] && payload.items[0].category_name) {
+      categoryName = payload.items[0].category_name;
+    }
     
     const ticket = {
       ticket_id: ticketId,
       branch_id: payload.branch_id,
+      work_type_id: workTypeId,
+      work_type_name: categoryName,
+      category_name: categoryName,
+      overview: Security.sanitizeString(payload.overview || payload.description || ''),
+      description: Security.sanitizeString(payload.description || payload.overview || ''),
+      priority: payload.priority || 'NORMAL',
       created_by: userContext.user_id,
       created_at: now,
       status: 'SUBMITTED',
@@ -29,10 +46,16 @@ const TicketService = {
     
     payload.items.forEach((item, index) => {
       const itemDesc = item.description || item.detail || '';
+      const itemWorkType = item.work_type_id || workTypeId;
+      const itemCatName = item.category_name || categoryName;
       db.insert('Ticket_Items', {
         item_id: ticketId + "-ITM-" + (index + 1),
         ticket_id: ticketId,
+        work_type_id: itemWorkType,
+        category_name: itemCatName,
+        detail: Security.sanitizeString(itemDesc),
         description: Security.sanitizeString(itemDesc),
+        image_url: item.image_url || '',
         status: 'PENDING'
       });
     });
@@ -77,6 +100,10 @@ const TicketService = {
     const branchMap = {};
     branches.forEach(b => { branchMap[b.branch_id] = b.branch_name; });
 
+    const workTypes = db.query('Work_Types');
+    const workTypeMap = {};
+    workTypes.forEach(wt => { workTypeMap[wt.work_type_id] = wt.work_type_name; });
+
     const assignments = db.query('Work_Assignments');
     const teams = db.query('Teams');
     const teamMap = {};
@@ -92,8 +119,11 @@ const TicketService = {
     const filtered = allTickets.filter(t => PermissionService.canViewTicket(t, userContext));
 
     return filtered.map(t => {
+      const catName = t.category_name || t.work_type_name || workTypeMap[t.work_type_id] || '';
       return Object.assign({}, t, {
         branch_name: branchMap[t.branch_id] || ('สาขา ' + t.branch_id),
+        category_name: catName,
+        work_type_name: catName,
         team: ticketTeamMap[t.ticket_id] || '',
         team_name: ticketTeamMap[t.ticket_id] || ''
       });
@@ -129,7 +159,19 @@ const TicketService = {
       activeTeamName = teams.length > 0 ? teams[0].team_name : activeAsn.team_id;
     }
 
+    // Resolve work type / category name if missing
+    let catName = ticket.category_name || ticket.work_type_name || '';
+    if (!catName && ticket.work_type_id) {
+      const wtList = db.query('Work_Types', { work_type_id: ticket.work_type_id });
+      if (wtList.length > 0) catName = wtList[0].work_type_name;
+    }
+    if (!catName && items.length > 0) {
+      catName = items[0].category_name || '';
+    }
+
     return Object.assign({}, ticket, {
+      category_name: catName,
+      work_type_name: catName,
       items: items,
       branch: branch,
       branch_name: branch ? branch.branch_name : ('สาขา ' + ticket.branch_id),

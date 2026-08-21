@@ -295,7 +295,9 @@ export default function TicketDetail({ role: propRole }) {
                 </div>
                 <div>
                   <label className="text-xs text-slate-400 font-medium">หมวดหมู่งานซ่อม</label>
-                  <p className="text-sm font-semibold text-slate-800">{ticket?.work_type_name || ticket?.work_type_id || '-'}</p>
+                  <p className="text-sm font-semibold text-slate-800">
+                    {ticket?.category_name || ticket?.work_type_name || (ticket?.items && ticket.items[0]?.category_name) || ticket?.work_type_id || 'งานซ่อมบำรุงทั่วไป'}
+                  </p>
                 </div>
               </div>
               <div className="space-y-4">
@@ -310,7 +312,7 @@ export default function TicketDetail({ role: propRole }) {
                 <div>
                   <label className="text-xs text-slate-400 font-medium">รายละเอียดภาพรวม</label>
                   <p className="text-sm text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-100 mt-1">
-                    {ticket?.description || ticket?.overview || 'ไม่มีรายละเอียดเพิ่มเติม'}
+                    {ticket?.overview || ticket?.description || (ticket?.items && ticket.items[0]?.detail) || (ticket?.items && ticket.items[0]?.description) || 'ไม่มีรายละเอียดเพิ่มเติม'}
                   </p>
                 </div>
               </div>
@@ -320,22 +322,42 @@ export default function TicketDetail({ role: propRole }) {
           {/* TAB 2: Locations / Items */}
           {activeTab === 'locations' && (
             <div>
-              <h3 className="text-sm font-bold text-slate-800 mb-3">รายการจุดที่ต้องเข้าซ่อม</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-slate-800">รายการจุดที่ต้องเข้าซ่อม</h3>
+                <span className="text-xs font-semibold bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full border border-slate-200">
+                  {ticket?.items?.length || 0} จุดซ่อม
+                </span>
+              </div>
               {ticket?.items && ticket.items.length > 0 ? (
                 <div className="space-y-3">
                   {ticket.items.map((item, idx) => (
-                    <div key={item.item_id || idx} className="p-3 border border-slate-200 rounded-lg bg-slate-50 flex items-start gap-3">
-                      <span className="w-6 h-6 rounded bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center shrink-0">
-                        {idx + 1}
-                      </span>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-slate-800">{item.detail || item.description}</p>
-                        {item.image_url && (
-                          <a href={item.image_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline mt-1 inline-block">
-                            ดูรูปถ่ายประกอบ
-                          </a>
+                    <div key={item.item_id || idx} className="p-4 border border-slate-200 rounded-xl bg-slate-50/70 hover:bg-white transition-all space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-lg bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
+                            {idx + 1}
+                          </span>
+                          <span className="font-bold text-xs text-slate-800">
+                            จุดซ่อมที่ {idx + 1}
+                          </span>
+                        </div>
+                        {item.category_name && (
+                          <span className="text-[10px] font-semibold bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200">
+                            {item.category_name}
+                          </span>
                         )}
                       </div>
+                      <p className="text-xs text-slate-700 leading-relaxed font-medium pl-8">
+                        {item.detail || item.description || 'ไม่มีรายละเอียดระบุ'}
+                      </p>
+                      {item.image_url && (
+                        <div className="pl-8 pt-1">
+                          <a href={item.image_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-1">
+                            <Camera className="w-3.5 h-3.5" />
+                            <span>ดูรูปถ่ายประกอบจุดซ่อม</span>
+                          </a>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
