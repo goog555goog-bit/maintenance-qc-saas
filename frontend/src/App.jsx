@@ -80,9 +80,9 @@ export default function App() {
           <Route path="/dashboard/tech" element={<PrivateRoute allowedRoles={['tech']}><TechDashboard /></PrivateRoute>} />
 
           {/* Shared Routes */}
-          <Route path="/tickets" element={<PrivateRoute allowedRoles={['admin', 'manager']}><TicketList role={currentRole} /></PrivateRoute>} />
+          <Route path="/tickets" element={<PrivateRoute allowedRoles={['admin', 'manager', 'tech']}><TicketList role={currentRole} /></PrivateRoute>} />
           <Route path="/tickets/:id" element={<PrivateRoute allowedRoles={['admin', 'manager', 'tech']}><TicketDetail role={currentRole} /></PrivateRoute>} />
-          <Route path="/archive" element={<PrivateRoute allowedRoles={['admin', 'manager']}><ArchiveList role={currentRole} /></PrivateRoute>} />
+          <Route path="/archive" element={<PrivateRoute allowedRoles={['admin', 'manager', 'tech']}><ArchiveList role={currentRole} /></PrivateRoute>} />
           <Route path="/notifications" element={<PrivateRoute allowedRoles={['admin', 'manager', 'tech']}><Notifications /></PrivateRoute>} />
           <Route path="/profile" element={<PrivateRoute allowedRoles={['admin', 'manager', 'tech']}><UserProfile /></PrivateRoute>} />
 
