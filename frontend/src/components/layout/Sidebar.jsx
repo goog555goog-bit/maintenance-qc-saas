@@ -3,6 +3,7 @@ import { useLocation, Link } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Ticket, 
+  PlusCircle,
   Users, 
   Building2, 
   Fuel, 
@@ -14,29 +15,53 @@ import {
   LogOut,
   ShieldCheck
 } from 'lucide-react';
+import { useAuth } from '@/core/auth';
 
 export default function Sidebar({ currentRole = 'tech' }) {
   const location = useLocation();
+  const { logout, user } = useAuth() || {};
 
+  const storedUser = (() => {
+    try {
+      const raw = localStorage.getItem('auth_user');
+      return raw ? JSON.parse(raw) : (user || {});
+    } catch {
+      return user || {};
+    }
+  })();
+
+  // Role normalized
+  const role = (() => {
+    const r = String(storedUser.role || currentRole || '').toUpperCase();
+    if (r === 'CENTRAL_ADMIN' || r === 'ADMIN') return 'admin';
+    if (r === 'BRANCH_MANAGER' || r === 'MANAGER') return 'manager';
+    if (r === 'TECHNICIAN' || r === 'TECH') return 'tech';
+    return 'tech';
+  })();
+
+  // Navigation Items per Role
   const navItems = [
-    { label: 'ภาพรวมแดชบอร์ด', icon: LayoutDashboard, path: `/dashboard/${currentRole}` },
-    { label: 'รายการใบงานแจ้งซ่อม', icon: Ticket, path: '/tickets', badge: '3' },
-    { label: 'จัดสรรทีมช่าง', icon: Users, path: '/assignments', adminOnly: true },
-    { label: 'ข้อมูลสาขา', icon: Building2, path: '/branches', adminOnly: true },
-    { label: 'ค่าน้ำมันและระยะทาง', icon: Fuel, path: '/fuel/review', adminOnly: true },
-    { label: 'รายงานสถิติ', icon: FileText, path: '/reports', adminOnly: true },
-    { label: 'คลังประวัติใบงาน', icon: Archive, path: '/archive' },
-    { label: 'การแจ้งเตือน', icon: Bell, path: '/notifications', badge: '2' },
-    { label: 'ตั้งค่าระบบ', icon: Settings, path: '/settings', adminOnly: true },
+    { label: 'ภาพรวมแดชบอร์ด', icon: LayoutDashboard, path: `/dashboard/${role}`, roles: ['admin', 'manager', 'tech'] },
+    { label: 'สร้างใบแจ้งซ่อม', icon: PlusCircle, path: '/tickets/new', roles: ['manager'] },
+    { label: 'รายการใบงานแจ้งซ่อม', icon: Ticket, path: '/tickets', roles: ['admin', 'manager', 'tech'] },
+    { label: 'จัดสรรทีมช่าง', icon: Users, path: '/assignments', roles: ['admin'] },
+    { label: 'จัดการทีมช่าง', icon: Users, path: '/teams', roles: ['admin'] },
+    { label: 'ข้อมูลสาขา', icon: Building2, path: '/branches', roles: ['admin'] },
+    { label: 'กำหนดเรทน้ำมัน', icon: Fuel, path: '/fuel/rates', roles: ['admin'] },
+    { label: 'ตรวจสอบค่าน้ำมัน', icon: Fuel, path: '/fuel/review', roles: ['admin', 'manager'] },
+    { label: 'รายงานสถิติ', icon: FileText, path: '/reports', roles: ['admin'] },
+    { label: 'คลังประวัติใบงาน', icon: Archive, path: '/archive', roles: ['admin', 'manager'] },
+    { label: 'การแจ้งเตือน', icon: Bell, path: '/notifications', roles: ['admin', 'manager', 'tech'] },
+    { label: 'ตั้งค่าระบบ', icon: Settings, path: '/settings', roles: ['admin'] },
   ];
 
   const roleLabels = {
-    admin: { title: 'ผู้ดูแลระบบส่วนกลาง (ADMIN)', tag: 'ADMIN', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-    manager: { title: 'ผู้จัดการสาขา (MANAGER)', tag: 'MANAGER', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-    tech: { title: 'ช่างเทคนิคภาคสนาม (TECH)', tag: 'TECH-A', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+    admin: { title: 'ผู้ดูแลระบบส่วนกลาง', tag: 'CENTRAL_ADMIN', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+    manager: { title: 'ผู้จัดการสาขา', tag: 'BRANCH_MANAGER', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    tech: { title: 'ช่างเทคนิคภาคสนาม', tag: 'TECHNICIAN', color: 'bg-blue-50 text-blue-700 border-blue-200' },
   };
 
-  const roleInfo = roleLabels[currentRole] || roleLabels.tech;
+  const roleInfo = roleLabels[role] || roleLabels.tech;
 
   return (
     <aside className="w-60 bg-white border-r border-slate-200/90 flex flex-col select-none shrink-0">
@@ -59,15 +84,13 @@ export default function Sidebar({ currentRole = 'tech' }) {
         <div className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
           เมนูหลัก
         </div>
-        {navItems.map((item) => {
-          if (item.adminOnly && currentRole !== 'admin') return null;
-
-          const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
+        {navItems.filter(item => item.roles.includes(role)).map((item) => {
+          const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname === item.path);
           const Icon = item.icon;
 
           return (
             <Link
-              key={item.label}
+              key={item.label + item.path}
               to={item.path}
               className={`flex items-center justify-between px-2.5 py-1.5 rounded text-xs font-medium transition-colors ${
                 isActive
@@ -79,13 +102,6 @@ export default function Sidebar({ currentRole = 'tech' }) {
                 <Icon className={`w-4 h-4 ${isActive ? 'text-blue-400' : 'text-slate-400'}`} />
                 <span>{item.label}</span>
               </div>
-              {item.badge && (
-                <span className={`text-[10px] font-semibold px-1.5 py-0.2 rounded ${
-                  isActive ? 'bg-slate-800 text-blue-300' : 'bg-slate-100 text-slate-600'
-                }`}>
-                  {item.badge}
-                </span>
-              )}
             </Link>
           );
         })}
@@ -94,27 +110,40 @@ export default function Sidebar({ currentRole = 'tech' }) {
       {/* User Section */}
       <div className="p-3 border-t border-slate-200/80 bg-slate-50/50">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
+          <Link to="/profile" className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity">
             <div className="w-8 h-8 rounded bg-slate-200 text-slate-700 flex items-center justify-center font-semibold text-xs shrink-0">
               <User className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <div className="text-xs font-semibold text-slate-900 truncate leading-tight">EMP-0012</div>
-              <span className={`inline-block text-[9px] font-bold px-1.5 py-0.2 rounded border ${roleInfo.color}`}>
-                {roleInfo.tag}
-              </span>
+              <div className="text-xs font-semibold text-slate-800 truncate">
+                {storedUser.username || storedUser.user_id || 'ผู้ใช้งาน'}
+              </div>
+              <div className="text-[10px] text-slate-500 truncate font-mono">
+                {storedUser.user_id || ''}
+              </div>
             </div>
-          </div>
-          <Link
-            to="/login"
-            className="p-1.5 text-slate-400 hover:text-slate-700 rounded hover:bg-slate-100 transition-colors shrink-0"
+          </Link>
+          <button
+            onClick={() => {
+              if (logout) logout();
+              else {
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('auth_user');
+                window.location.href = '/login';
+              }
+            }}
+            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
             title="ออกจากระบบ"
           >
             <LogOut className="w-4 h-4" />
-          </Link>
+          </button>
+        </div>
+        <div className="mt-2">
+          <span className={`inline-block px-1.5 py-0.5 text-[9px] font-semibold rounded border ${roleInfo.color}`}>
+            {roleInfo.tag}
+          </span>
         </div>
       </div>
     </aside>
   );
 }
-
