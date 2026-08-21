@@ -28,10 +28,11 @@ const TicketService = {
     db.insert('Tickets', ticket);
     
     payload.items.forEach((item, index) => {
+      const itemDesc = item.description || item.detail || '';
       db.insert('Ticket_Items', {
         item_id: ticketId + "-ITM-" + (index + 1),
         ticket_id: ticketId,
-        description: item.description,
+        description: Security.sanitizeString(itemDesc),
         status: 'PENDING'
       });
     });
