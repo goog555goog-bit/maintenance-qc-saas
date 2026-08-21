@@ -191,8 +191,18 @@ const Router = {
         return RBAC.getUserHistory(payload, userContext);
 
       // ---- Work Types ----
-      case 'work_type.list':
-        return db.query('Work_Types');
+      case 'work_type.list': {
+        const allTypes = db.query('Work_Types');
+        const allItems = db.query('Work_Type_Items');
+        return allTypes.map(function(wt) {
+          const items = allItems.filter(function(it) {
+            const matchId = String(it.work_type_id || '').trim() === String(wt.work_type_id || '').trim();
+            const isActive = it.status === undefined || it.status === null || String(it.status).toUpperCase() === 'ACTIVE';
+            return matchId && isActive;
+          });
+          return Object.assign({}, wt, { items: items });
+        });
+      }
       case 'work_type.create': {
         Validation.requireFields(payload, ['work_type_name']);
         const wtId = 'WT-' + Utilities.getUuid().slice(0, 8).toUpperCase();
@@ -212,6 +222,31 @@ const Router = {
         if (payload.work_type_name) updates.work_type_name = Security.sanitizeString(payload.work_type_name);
         if (payload.status !== undefined) updates.status = payload.status;
         db.update('Work_Types', 'work_type_id', payload.work_type_id, updates);
+        return { success: true };
+      }
+      case 'work_type.item.create': {
+        Validation.requireFields(payload, ['work_type_id', 'item_name']);
+        const itemId = 'WTI-' + Utilities.getUuid().slice(0, 8).toUpperCase();
+        const row = {
+          work_type_item_id: itemId,
+          work_type_id: payload.work_type_id,
+          item_name: Security.sanitizeString(payload.item_name),
+          status: 'ACTIVE'
+        };
+        db.insert('Work_Type_Items', row);
+        return row;
+      }
+      case 'work_type.item.update': {
+        Validation.requireFields(payload, ['work_type_item_id']);
+        const updates = {};
+        if (payload.item_name) updates.item_name = Security.sanitizeString(payload.item_name);
+        if (payload.status !== undefined) updates.status = payload.status;
+        db.update('Work_Type_Items', 'work_type_item_id', payload.work_type_item_id, updates);
+        return { success: true };
+      }
+      case 'work_type.item.delete': {
+        Validation.requireFields(payload, ['work_type_item_id']);
+        db.update('Work_Type_Items', 'work_type_item_id', payload.work_type_item_id, { status: 'INACTIVE' });
         return { success: true };
       }
 
