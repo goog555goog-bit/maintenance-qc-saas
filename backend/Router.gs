@@ -100,11 +100,14 @@ const Router = {
       case 'team.get': {
         const team = db.query('Teams', { team_id: payload.team_id })[0] || null;
         if (!team) return null;
-        // Get current members
-        const members = db.query('User_Assignment_History', { team_id: payload.team_id, effective_to: '' })
+        // Get current active members from User_Assignment_History
+        const members = db.query('User_Assignment_History', { team_id: payload.team_id })
+          .filter(function(a) {
+            return !a.effective_to || String(a.effective_to).trim() === '';
+          })
           .map(function(a) {
             const u = db.query('Users', { user_id: a.user_id })[0] || {};
-            return { user_id: a.user_id, username: u.username || a.user_id, role: u.role || '', assignment_id: a.assignment_id };
+            return { user_id: a.user_id, username: u.username || a.user_id, role: u.role || 'TECHNICIAN', assignment_id: a.assignment_id };
           });
         return Object.assign({}, team, { members: members });
       }
@@ -158,8 +161,12 @@ const Router = {
 
       // ---- Users ----
       case 'user.list':
-        return db.query('Users', { active: 'TRUE' }).map(function(u) {
-          return { user_id: u.user_id, username: u.username, role: u.role, email: u.email || '' };
+        return db.query('Users').filter(function(u) {
+          if (u.active === undefined || u.active === null || u.active === '') return true;
+          const act = String(u.active).trim().toUpperCase();
+          return act === 'TRUE' || act === '1' || act === 'ACTIVE';
+        }).map(function(u) {
+          return { user_id: u.user_id, username: u.username || u.user_id, role: u.role || 'TECHNICIAN', email: u.email || '' };
         });
       case 'user.create': {
         Validation.requireFields(payload, ['user_id', 'role']);

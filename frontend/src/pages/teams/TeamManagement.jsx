@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, Trash2, Shield, UserPlus, X, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Users, Plus, Trash2, UserPlus, X, Loader2, AlertCircle, CheckCircle2, Search, Building2, RefreshCw } from 'lucide-react';
 import { apiCall } from '@/core/api';
 
 export default function TeamManagement() {
@@ -7,9 +7,15 @@ export default function TeamManagement() {
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [teamDetail, setTeamDetail] = useState(null);
   const [allUsers, setAllUsers] = useState([]);
-  const [loading, setLoading] = useState(false);
+  
+  // Loading states
+  const [loading, setLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Modals
   const [showModal, setShowModal] = useState(false);
@@ -32,11 +38,15 @@ export default function TeamManagement() {
       setTeams(teamsList);
       setAllUsers(usersList);
 
-      if (teamsList.length > 0 && !selectedTeam) {
-        handleSelectTeam(teamsList[0]);
+      if (teamsList.length > 0) {
+        const targetTeam = selectedTeam ? teamsList.find(t => t.team_id === selectedTeam.team_id) || teamsList[0] : teamsList[0];
+        handleSelectTeam(targetTeam);
+      } else {
+        setTeamDetail(null);
+        setSelectedTeam(null);
       }
     } catch (err) {
-      setError(err.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูล');
+      setError(err.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูลทีมช่าง');
     } finally {
       setLoading(false);
     }
@@ -47,7 +57,7 @@ export default function TeamManagement() {
   }, []);
 
   const loadTeamDetail = async (team_id) => {
-    setLoading(true);
+    setDetailLoading(true);
     setError(null);
     try {
       const res = await apiCall('team.get', { team_id });
@@ -58,38 +68,48 @@ export default function TeamManagement() {
     } catch (err) {
       setError(err.message || 'เกิดข้อผิดพลาดในการโหลดรายละเอียดทีม');
     } finally {
-      setLoading(false);
+      setDetailLoading(false);
     }
   };
 
   const handleSelectTeam = (team) => {
+    if (!team) return;
+    setSelectedTeam(team);
     loadTeamDetail(team.team_id);
   };
 
   const handleCreateTeam = async (e) => {
     e.preventDefault();
     if (!newTeamName.trim()) return;
-    setLoading(true);
+    setActionLoading(true);
     setError(null);
     try {
-      await apiCall('team.create', { team_name: newTeamName.trim(), description: newTeamDesc.trim() });
+      const created = await apiCall('team.create', { 
+        team_name: newTeamName.trim(), 
+        description: newTeamDesc.trim() 
+      });
       setShowModal(false);
       setNewTeamName('');
       setNewTeamDesc('');
-      setSuccessMsg('สร้างทีมช่างใหม่สำเร็จ');
-      setTimeout(() => setSuccessMsg(''), 3000);
-      fetchData();
+      setSuccessMsg('สร้างทีมช่างใหม่สำเร็จแล้ว');
+      setTimeout(() => setSuccessMsg(''), 3500);
+      
+      const newTeamObj = created?.data || created || null;
+      if (newTeamObj && newTeamObj.team_id) {
+        setSelectedTeam(newTeamObj);
+      }
+      await fetchData();
     } catch (err) {
       setError(err.message || 'เกิดข้อผิดพลาดในการสร้างทีม');
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   };
 
   const handleAddMember = async (e) => {
     e.preventDefault();
     if (!selectedUserId || !selectedTeam) return;
-    setLoading(true);
+    setActionLoading(true);
     setError(null);
     try {
       await apiCall('team.addMember', { 
@@ -100,28 +120,28 @@ export default function TeamManagement() {
       setShowAddMember(false);
       setSelectedUserId('');
       setSuccessMsg('เพิ่มสมาชิกเข้าทีมเรียบร้อยแล้ว');
-      setTimeout(() => setSuccessMsg(''), 3000);
-      loadTeamDetail(selectedTeam.team_id);
+      setTimeout(() => setSuccessMsg(''), 3500);
+      await loadTeamDetail(selectedTeam.team_id);
     } catch (err) {
       setError(err.message || 'เกิดข้อผิดพลาดในการเพิ่มสมาชิก');
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   };
 
   const handleRemoveMember = async (assignment_id) => {
     if (!confirm('คุณต้องการนำสมาชิกคนนี้ออกจากทีมใช่หรือไม่?')) return;
-    setLoading(true);
+    setActionLoading(true);
     setError(null);
     try {
       await apiCall('team.removeMember', { assignment_id });
       setSuccessMsg('นำสมาชิกออกจากทีมเรียบร้อยแล้ว');
-      setTimeout(() => setSuccessMsg(''), 3000);
-      loadTeamDetail(selectedTeam.team_id);
+      setTimeout(() => setSuccessMsg(''), 3500);
+      await loadTeamDetail(selectedTeam.team_id);
     } catch (err) {
       setError(err.message || 'เกิดข้อผิดพลาดในการนำสมาชิกออก');
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   };
 
@@ -131,33 +151,52 @@ export default function TeamManagement() {
     return !teamDetail.members.some(member => member.user_id === user.user_id);
   });
 
+  const filteredTeams = teams.filter(t => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    const matchName = t.team_name && t.team_name.toLowerCase().includes(q);
+    const matchId = t.team_id && t.team_id.toLowerCase().includes(q);
+    const matchDesc = t.description && t.description.toLowerCase().includes(q);
+    return matchName || matchId || matchDesc;
+  });
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">จัดการทีมช่างเทคนิค</h1>
-          <p className="text-xs text-slate-500 mt-0.5">บริหารจัดการทีมงาน กำหนดหัวหน้าทีม และจัดสรรกำลังพลช่างเทคนิค</p>
+          <p className="text-xs text-slate-500 mt-0.5">บริหารจัดการทีมงาน กำหนดขอบเขตงาน และจัดสรรสมาชิกช่างเทคนิค</p>
         </div>
-        <button 
-          onClick={() => setShowModal(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-1.5 transition-colors shadow-xs self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>สร้างทีมช่างใหม่</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchData}
+            disabled={loading}
+            className="p-2 border border-slate-200 bg-white rounded-xl hover:bg-slate-50 text-slate-600 transition-colors shadow-xs"
+            title="รีเฟรชข้อมูล"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button 
+            onClick={() => setShowModal(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-1.5 transition-colors shadow-xs self-start sm:self-auto"
+          >
+            <Plus className="w-4 h-4" />
+            <span>สร้างทีมช่างใหม่</span>
+          </button>
+        </div>
       </div>
       
       {successMsg && (
         <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-emerald-800 text-xs">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {error && (
         <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-rose-800 text-xs">
-          <AlertCircle className="w-4 h-4 shrink-0" />
+          <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
           <span>{error}</span>
         </div>
       )}
@@ -165,23 +204,45 @@ export default function TeamManagement() {
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Teams List */}
-        <div className="border border-slate-200 bg-white rounded-xl shadow-xs overflow-hidden flex flex-col h-[560px]">
-          <div className="bg-slate-50/70 p-4 border-b border-slate-200 text-xs font-bold text-slate-700 flex items-center justify-between">
-            <span>รายชื่อทีมช่างทั้งหมด</span>
-            <span className="text-[11px] font-mono font-semibold bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-600">
-              {teams.length} ทีม
-            </span>
+        <div className="border border-slate-200 bg-white rounded-xl shadow-xs overflow-hidden flex flex-col h-[580px]">
+          <div className="bg-slate-50/70 p-4 border-b border-slate-200 space-y-3">
+            <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+              <span>รายชื่อทีมช่างทั้งหมด</span>
+              <span className="text-[11px] font-mono font-semibold bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-600">
+                {teams.length} ทีม
+              </span>
+            </div>
+            {/* Search Team */}
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="ค้นหาชื่อทีม หรือรหัส..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
           </div>
 
-          {teams.length === 0 && !loading ? (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center flex-1 p-8 text-center text-slate-400">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-2" />
+              <span className="text-xs font-medium text-slate-600">กำลังโหลดรายชื่อทีมช่าง...</span>
+            </div>
+          ) : filteredTeams.length === 0 ? (
             <div className="flex flex-col items-center justify-center flex-1 p-8 text-center text-slate-400">
               <Users className="h-10 w-10 text-slate-300 mb-2" />
-              <p className="text-xs font-medium text-slate-600">ยังไม่มีข้อมูลทีมช่าง</p>
-              <p className="text-[11px] text-slate-400 mt-1">กดปุ่ม 'สร้างทีมช่างใหม่' เพื่อเริ่มต้น</p>
+              <p className="text-xs font-medium text-slate-600">
+                {searchQuery ? 'ไม่พบทีมช่างที่ตรงกับการค้นหา' : 'ยังไม่มีข้อมูลทีมช่างในระบบ'}
+              </p>
+              <p className="text-[11px] text-slate-400 mt-1">
+                {searchQuery ? 'ลองเปลี่ยนคำค้นหา' : 'กดปุ่ม สร้างทีมช่างใหม่ ด้านบนเพื่อเริ่มต้น'}
+              </p>
             </div>
           ) : (
             <ul className="divide-y divide-slate-100 overflow-y-auto flex-1">
-              {teams.map(team => {
+              {filteredTeams.map(team => {
                 const isSelected = selectedTeam?.team_id === team.team_id;
                 return (
                   <li 
@@ -208,9 +269,14 @@ export default function TeamManagement() {
         </div>
         
         {/* Right: Team Details & Members */}
-        <div className="lg:col-span-2 border border-slate-200 bg-white rounded-xl shadow-xs flex flex-col h-[560px] overflow-hidden">
-          {!teamDetail ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-slate-400 p-6 text-center">
+        <div className="lg:col-span-2 border border-slate-200 bg-white rounded-xl shadow-xs flex flex-col h-[580px] overflow-hidden">
+          {loading || detailLoading ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-slate-400 p-8 text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-2" />
+              <span className="text-xs font-medium text-slate-600">กำลังโหลดข้อมูลและรายชื่อสมาชิกในทีม...</span>
+            </div>
+          ) : !teamDetail ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-slate-400 p-8 text-center">
               <Users className="h-12 w-12 text-slate-300 mb-3" />
               <p className="text-sm font-bold text-slate-700">ยังไม่ได้เลือกทีมช่าง</p>
               <p className="text-xs text-slate-400 mt-1">โปรดเลือกทีมช่างจากรายการด้านซ้ายเพื่อดูรายชื่อสมาชิก</p>
@@ -333,10 +399,10 @@ export default function TeamManagement() {
                 </button>
                 <button 
                   type="submit"
-                  disabled={loading}
+                  disabled={actionLoading}
                   className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors shadow-xs disabled:bg-blue-300"
                 >
-                  {loading ? 'กำลังบันทึก...' : 'สร้างทีม'}
+                  {actionLoading ? 'กำลังบันทึก...' : 'สร้างทีม'}
                 </button>
               </div>
             </form>
@@ -381,10 +447,10 @@ export default function TeamManagement() {
                 </button>
                 <button 
                   type="submit"
-                  disabled={loading || !selectedUserId}
+                  disabled={actionLoading || !selectedUserId}
                   className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors shadow-xs disabled:bg-blue-300"
                 >
-                  {loading ? 'กำลังเพิ่ม...' : 'เพิ่มเข้าทีม'}
+                  {actionLoading ? 'กำลังเพิ่ม...' : 'เพิ่มเข้าทีม'}
                 </button>
               </div>
             </form>
