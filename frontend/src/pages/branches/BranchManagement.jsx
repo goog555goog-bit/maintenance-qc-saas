@@ -17,7 +17,7 @@ export default function BranchManagement() {
     setError(null);
     try {
       const res = await apiCall('branch.list', {});
-      setBranches(res.data || []);
+      setBranches(Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []));
     } catch (err) {
       setError(err.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูล');
     } finally {

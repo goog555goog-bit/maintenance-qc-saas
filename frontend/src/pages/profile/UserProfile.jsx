@@ -66,10 +66,8 @@ export default function UserProfile() {
     setPassLoading(true);
 
     try {
-      // Direct update
-      await apiCall('auth.resetPassword', {
-        user_id: user?.user_id,
-        otp_code: 'DIRECT_AUTH',
+      await apiCall('auth.changePassword', {
+        current_password: currentPassword,
         new_password: newPassword
       });
 

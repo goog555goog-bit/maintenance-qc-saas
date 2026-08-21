@@ -252,6 +252,48 @@ const Auth = {
       email: email,
       message: "บันทึกอีเมลเรียบร้อยแล้ว"
     };
+  },
+
+  changePassword: function(payload, userContext) {
+    Validation.requireFields(payload, ['new_password']);
+    const userId = userContext.user_id;
+    const newPassword = String(payload.new_password);
+    const currentPassword = payload.current_password ? String(payload.current_password) : null;
+
+    if (newPassword.length < 4) {
+      throw new Error("รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 4 ตัวอักษร");
+    }
+
+    const db = Database.getInstance();
+    const users = db.query('Users', { user_id: userId });
+    if (users.length === 0) {
+      throw new Error("ไม่พบข้อมูลผู้ใช้งาน");
+    }
+    const user = users[0];
+
+    // If current password is provided, verify it
+    if (currentPassword) {
+      const isDefaultMatch = String(user.user_id).trim() === currentPassword.trim();
+      const isHashMatch = Security.verifyPassword(currentPassword, user.password_hash, user.salt);
+      if (!isDefaultMatch && !isHashMatch) {
+        throw new Error("รหัสผ่านเดิมไม่ถูกต้อง");
+      }
+    }
+
+    const salt = Security.generateSalt();
+    const newHash = Security.hashPassword(newPassword, salt);
+
+    db.update('Users', 'user_id', userId, {
+      password_hash: newHash,
+      salt: salt
+    });
+
+    AuditService.logActivity(userId, userContext.role, 'CHANGE_PASSWORD', 'User', userId, null, null, 'เปลี่ยนรหัสผ่านสำเร็จ');
+
+    return {
+      success: true,
+      message: "เปลี่ยนรหัสผ่านใหม่สำเร็จแล้ว"
+    };
   }
 };
 

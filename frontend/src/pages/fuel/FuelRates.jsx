@@ -14,10 +14,12 @@ export default function FuelRates() {
     setError(null);
     try {
       const historyRes = await apiCall('fuel_rate.list', {});
-      setRateHistory(historyRes.rates || []);
+      const rates = Array.isArray(historyRes) ? historyRes : (historyRes?.rates || historyRes?.data || []);
+      setRateHistory(rates);
       
       const currentRes = await apiCall('fuel_rate.get', {});
-      setCurrentRate(currentRes.rate || 0);
+      const rateVal = currentRes ? (currentRes.rate_per_km || currentRes.rate || 0) : (rates.length > 0 ? rates[rates.length - 1].rate_per_km : 0);
+      setCurrentRate(Number(rateVal));
     } catch (err) {
       setError(err.message || 'Failed to fetch fuel rates');
     } finally {
@@ -34,7 +36,11 @@ export default function FuelRates() {
     setError(null);
     setSuccessMsg('');
     try {
-      await apiCall('fuel_rate.set', { rate: Number(currentRate), effective_date: new Date().toISOString() });
+      await apiCall('fuel_rate.set', { 
+        rate_per_km: Number(currentRate),
+        rate: Number(currentRate),
+        effective_from: new Date().toISOString().split('T')[0]
+      });
       setSuccessMsg('อัปเดตอัตราค่าน้ำมันสำเร็จ');
       await fetchRates();
     } catch (err) {

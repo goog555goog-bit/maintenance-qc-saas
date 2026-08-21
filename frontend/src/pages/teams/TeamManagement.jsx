@@ -25,8 +25,8 @@ export default function TeamManagement() {
         apiCall('team.list', {}),
         apiCall('user.list', {})
       ]);
-      setTeams(teamsRes.data || []);
-      setAllUsers(usersRes.data || []);
+      setTeams(Array.isArray(teamsRes) ? teamsRes : (Array.isArray(teamsRes?.data) ? teamsRes.data : []));
+      setAllUsers(Array.isArray(usersRes) ? usersRes : (Array.isArray(usersRes?.data) ? usersRes.data : []));
     } catch (err) {
       setError(err.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูล');
     } finally {
@@ -43,9 +43,10 @@ export default function TeamManagement() {
     setError(null);
     try {
       const res = await apiCall('team.get', { team_id });
-      setTeamDetail(res.data);
+      const detail = res?.data || res || null;
+      setTeamDetail(detail);
       const team = teams.find(t => t.team_id === team_id);
-      setSelectedTeam(team || res.data);
+      setSelectedTeam(team || detail);
     } catch (err) {
       setError(err.message || 'เกิดข้อผิดพลาดในการโหลดรายละเอียดทีม');
     } finally {

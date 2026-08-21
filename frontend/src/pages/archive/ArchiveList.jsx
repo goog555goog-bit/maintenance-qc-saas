@@ -16,8 +16,8 @@ export default function ArchiveList() {
   const fetchArchives = async () => {
     setLoading(true);
     try {
-      const res = await apiCall('ticket.list');
-      const tickets = res.tickets || res.data || [];
+      const res = await apiCall('archive.list');
+      const tickets = Array.isArray(res) ? res : (Array.isArray(res?.tickets) ? res.tickets : (Array.isArray(res?.data) ? res.data : []));
       const archived = tickets.filter(t => t.status === 'CLOSED' || t.status === 'ARCHIVED');
       setArchives(archived);
     } catch (error) {

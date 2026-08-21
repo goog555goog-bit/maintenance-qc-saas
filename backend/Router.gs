@@ -36,6 +36,8 @@ const Router = {
         return Auth.resetPassword(payload);
       case 'auth.updateProfile':
         return Auth.updateProfile(payload, userContext);
+      case 'auth.changePassword':
+        return Auth.changePassword(payload, userContext);
 
       // ---- Tickets ----
       case 'ticket.create':

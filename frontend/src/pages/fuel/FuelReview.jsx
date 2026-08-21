@@ -18,7 +18,7 @@ export default function FuelReview() {
     setError(null);
     try {
       const res = await apiCall('fuel_review.list', {});
-      setFuelRequests(res.requests || []);
+      setFuelRequests(Array.isArray(res) ? res : (Array.isArray(res?.requests) ? res.requests : (Array.isArray(res?.data) ? res.data : [])));
     } catch (err) {
       setError(err.message || 'Failed to fetch requests');
     } finally {

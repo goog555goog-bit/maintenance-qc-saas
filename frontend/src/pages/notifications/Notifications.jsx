@@ -14,7 +14,7 @@ export default function Notifications() {
     setError(null);
     try {
       const res = await apiCall('notification.list', {});
-      setNotifications(res.notifications || []);
+      setNotifications(Array.isArray(res) ? res : (Array.isArray(res?.notifications) ? res.notifications : (Array.isArray(res?.data) ? res.data : [])));
     } catch (err) {
       setError(err.message || 'Failed to fetch notifications');
     } finally {
