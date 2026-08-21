@@ -1,7 +1,10 @@
-import React from 'react';
-import { Users, Briefcase, History } from 'lucide-react';
+import React, { useState } from 'react';
+import { Users, Briefcase, History, Inbox } from 'lucide-react';
 
 export default function TeamManagement() {
+  const [teams, setTeams] = useState([]);
+  const [selectedTeam, setSelectedTeam] = useState(null);
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
@@ -10,75 +13,30 @@ export default function TeamManagement() {
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1 border border-slate-200 bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="lg:col-span-1 border border-slate-200 bg-white rounded-lg shadow-sm overflow-hidden flex flex-col h-[600px]">
           <div className="bg-slate-50 p-4 border-b border-slate-200 font-semibold text-slate-700">รายชื่อทีม</div>
-          <ul className="divide-y divide-slate-100">
-            <li className="p-4 bg-blue-50 cursor-pointer">
-              <h3 className="font-bold text-blue-800">ทีมช่าง Alpha</h3>
-              <p className="text-sm text-blue-600">สมาชิก 3 คน</p>
-            </li>
-            <li className="p-4 hover:bg-slate-50 cursor-pointer">
-              <h3 className="font-semibold text-slate-700">ทีมช่าง Beta</h3>
-              <p className="text-sm text-slate-500">สมาชิก 2 คน</p>
-            </li>
-          </ul>
+          {teams.length === 0 ? (
+            <div className="flex flex-col items-center justify-center flex-1 p-8 text-center text-slate-500">
+              <Inbox className="h-12 w-12 text-slate-300 mb-3" />
+              <p className="text-sm font-medium">ยังไม่มีข้อมูลทีมช่าง</p>
+              <p className="text-xs text-slate-400 mt-1">คลิกปุ่ม "เพิ่มทีมช่าง" ด้านบนเพื่อเริ่มต้น</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-slate-100 overflow-y-auto">
+              {teams.map(team => (
+                <li key={team.id} className="p-4 hover:bg-slate-50 cursor-pointer">
+                  <h3 className="font-semibold text-slate-700">{team.name}</h3>
+                  <p className="text-sm text-slate-500">สมาชิก {team.members?.length || 0} คน</p>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         
-        <div className="lg:col-span-2 border border-slate-200 bg-white rounded-lg shadow-sm p-6">
-          <div className="flex justify-between items-start mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-800 mb-1">ทีมช่าง Alpha</h2>
-              <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold">เปิดใช้งาน</span>
-            </div>
-            <div className="flex gap-2">
-              <button className="border border-slate-300 px-3 py-1.5 rounded text-sm font-medium hover:bg-slate-50 text-slate-700 flex items-center gap-1"><History className="h-4 w-4" /> ประวัติการโยกย้ายสังกัดทีม</button>
-              <button className="border border-slate-300 px-3 py-1.5 rounded text-sm font-medium hover:bg-slate-50 text-slate-700">แก้ไขข้อมูลทีม</button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 mb-8">
-            <div className="border border-slate-200 p-4 rounded-lg bg-slate-50 flex items-center gap-3">
-              <div className="bg-white p-2 rounded shadow-sm"><Users className="h-5 w-5 text-blue-600" /></div>
-              <div>
-                <p className="text-sm text-slate-500 font-medium">สมาชิกในทีม</p>
-                <p className="text-lg font-bold text-slate-800">3</p>
-              </div>
-            </div>
-            <div className="border border-slate-200 p-4 rounded-lg bg-slate-50 flex items-center gap-3">
-              <div className="bg-white p-2 rounded shadow-sm"><Briefcase className="h-5 w-5 text-amber-500" /></div>
-              <div>
-                <p className="text-sm text-slate-500 font-medium">ภาระงานปัจจุบัน</p>
-                <p className="text-lg font-bold text-slate-800">2 ใบงาน</p>
-              </div>
-            </div>
-          </div>
-
-          <h3 className="text-lg font-semibold text-slate-800 mb-4 border-b pb-2">รายชื่อสมาชิก</h3>
-          <table className="w-full text-left">
-            <thead>
-              <tr className="text-sm text-slate-500 border-b border-slate-200">
-                <th className="pb-2 font-medium">ชื่อ-นามสกุล</th>
-                <th className="pb-2 font-medium">ตำแหน่ง</th>
-                <th className="pb-2 font-medium text-right">จัดการ</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              <tr>
-                <td className="py-3 text-sm text-slate-800 font-medium">สมชาย ท.</td>
-                <td className="py-3 text-sm text-slate-600">หัวหน้าช่าง</td>
-                <td className="py-3 text-right">
-                  <button className="text-red-600 hover:text-red-800 text-sm font-medium">นำออก</button>
-                </td>
-              </tr>
-              <tr>
-                <td className="py-3 text-sm text-slate-800 font-medium">วิชัย ป.</td>
-                <td className="py-3 text-sm text-slate-600">ช่างเทคนิค</td>
-                <td className="py-3 text-right">
-                  <button className="text-red-600 hover:text-red-800 text-sm font-medium">นำออก</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div className="lg:col-span-2 border border-slate-200 bg-white rounded-lg shadow-sm p-6 flex flex-col items-center justify-center h-[600px] text-slate-500">
+            <Users className="h-16 w-16 text-slate-200 mb-4" />
+            <p className="text-lg font-medium text-slate-600">ยังไม่ได้เลือกทีมช่าง</p>
+            <p className="text-sm text-slate-400 mt-2">โปรดเลือกทีมช่างจากรายการด้านซ้ายเพื่อดูรายละเอียด</p>
         </div>
       </div>
     </div>

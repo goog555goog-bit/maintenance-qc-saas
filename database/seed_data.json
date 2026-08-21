@@ -1,21 +1,8 @@
 {
-  "Users": [
-    { "user_id": "USR-001", "username": "admin", "password_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "salt": "salt123", "role": "CENTRAL_ADMIN", "active": "TRUE" },
-    { "user_id": "USR-002", "username": "manager_a", "password_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "salt": "salt123", "role": "BRANCH_MANAGER", "active": "TRUE" },
-    { "user_id": "USR-003", "username": "tech_team1", "password_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "salt": "salt123", "role": "TECHNICIAN", "active": "TRUE" }
-  ],
-  "Branches": [
-    { "branch_id": "BR-001", "branch_name": "Bangkok HQ", "location_lat": "13.7563", "location_lng": "100.5018", "status": "ACTIVE" }
-  ],
-  "Teams": [
-    { "team_id": "TM-001", "team_name": "Alpha Tech Team", "status": "ACTIVE" }
-  ],
-  "Work_Types": [
-    { "work_type_id": "WT-001", "work_type_name": "Electrical", "status": "ACTIVE" },
-    { "work_type_id": "WT-002", "work_type_name": "Plumbing", "status": "ACTIVE" }
-  ],
-  "User_Assignment_History": [
-    { "assignment_id": "UAH-001", "user_id": "USR-002", "role": "BRANCH_MANAGER", "branch_id": "BR-001", "team_id": "", "effective_from": "2024-01-01T00:00:00Z", "effective_to": "", "assigned_by": "USR-001", "reason": "Initial setup" },
-    { "assignment_id": "UAH-002", "user_id": "USR-003", "role": "TECHNICIAN", "branch_id": "", "team_id": "TM-001", "effective_from": "2024-01-01T00:00:00Z", "effective_to": "", "assigned_by": "USR-001", "reason": "Initial setup" }
-  ]
+  "Users": [],
+  "Branches": [],
+  "Teams": [],
+  "Work_Types": [],
+  "User_Assignment_History": []
 }
+

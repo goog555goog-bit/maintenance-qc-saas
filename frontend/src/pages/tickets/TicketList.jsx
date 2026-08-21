@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 
 const TicketList = () => {
   const [viewMode, setViewMode] = useState('table');
+  const [tickets, setTickets] = useState([]);
 
   return (
     <div className="ticket-list p-6">
@@ -48,9 +49,22 @@ const TicketList = () => {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td colSpan="8" className="p-3 text-center text-gray-500">ไม่มีข้อมูลแสดงผล</td>
-              </tr>
+              {tickets.length === 0 ? (
+                <tr>
+                  <td colSpan="8" className="p-8 text-center">
+                    <div className="flex flex-col items-center justify-center">
+                      <p className="text-lg font-medium text-gray-600 mb-2">ยังไม่มีข้อมูลใบงาน</p>
+                      <p className="text-sm text-gray-400">กดปุ่ม 'สร้างใบแจ้งซ่อมใหม่' เพื่อเริ่มต้น</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                tickets.map(ticket => (
+                  <tr key={ticket.id}>
+                    <td colSpan="8">...</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -58,12 +72,21 @@ const TicketList = () => {
         <div className="kanban-board flex gap-4">
           <div className="kanban-column flex-1 bg-gray-50 p-4 rounded min-h-[400px]">
             <h3 className="font-bold border-b pb-2 mb-4">รอจัดสรร</h3>
+            {tickets.filter(t => t.status === 'รอจัดสรร').length === 0 && (
+              <p className="text-center text-gray-500 mt-8">ยังไม่มีข้อมูลใบงาน</p>
+            )}
           </div>
           <div className="kanban-column flex-1 bg-gray-50 p-4 rounded min-h-[400px]">
             <h3 className="font-bold border-b pb-2 mb-4">กำลังดำเนินการ</h3>
+            {tickets.filter(t => t.status === 'กำลังดำเนินการ').length === 0 && (
+              <p className="text-center text-gray-500 mt-8">ยังไม่มีข้อมูลใบงาน</p>
+            )}
           </div>
           <div className="kanban-column flex-1 bg-gray-50 p-4 rounded min-h-[400px]">
             <h3 className="font-bold border-b pb-2 mb-4">รอตรวจรับ</h3>
+            {tickets.filter(t => t.status === 'รอตรวจรับ').length === 0 && (
+              <p className="text-center text-gray-500 mt-8">ยังไม่มีข้อมูลใบงาน</p>
+            )}
           </div>
         </div>
       )}

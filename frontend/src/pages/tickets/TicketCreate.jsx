@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 const TicketCreate = () => {
   const navigate = useNavigate();
   const [locations, setLocations] = useState([{ id: 1, detail: '', image: null }]);
+  const [branches, setBranches] = useState([]);
+  const [categories, setCategories] = useState([]);
 
   const addLocation = () => {
     setLocations([...locations, { id: Date.now(), detail: '', image: null }]);
@@ -19,12 +21,18 @@ const TicketCreate = () => {
             <label className="block mb-1 font-semibold">สาขาที่แจ้ง</label>
             <select className="w-full border p-2 rounded">
               <option value="">เลือกสาขา</option>
+              {branches.map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
             </select>
           </div>
           <div>
             <label className="block mb-1 font-semibold">หมวดหมู่งานหลัก</label>
             <select className="w-full border p-2 rounded">
               <option value="">เลือกหมวดหมู่งาน</option>
+              {categories.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
             </select>
           </div>
         </div>
