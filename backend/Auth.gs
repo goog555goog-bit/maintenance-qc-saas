@@ -10,28 +10,33 @@ const Auth = {
     const inputPassword = String(payload.password);
     
     // Find user by user_id, username, or email
-    const allUsers = db.query('Users', { active: 'TRUE' });
-    const user = allUsers.find(u => 
-      (u.user_id && u.user_id.toLowerCase() === identifier.toLowerCase()) ||
-      (u.username && u.username.toLowerCase() === identifier.toLowerCase()) ||
-      (u.email && u.email.toLowerCase() === identifier.toLowerCase())
-    );
+    const allUsers = db.query('Users');
+    const user = allUsers.find(u => {
+      const isActive = u.active === undefined || u.active === null || String(u.active).toUpperCase() === 'TRUE';
+      if (!isActive) return false;
+      return (
+        (u.user_id && String(u.user_id).trim().toLowerCase() === identifier.toLowerCase()) ||
+        (u.username && String(u.username).trim().toLowerCase() === identifier.toLowerCase()) ||
+        (u.email && String(u.email).trim().toLowerCase() === identifier.toLowerCase())
+      );
+    });
     
     if (!user) {
-      throw new Error("รหัสพนักงานหรือรหัสผ่านไม่ถูกต้อง");
+      throw new Error("ไม่พบรหัสพนักงานนี้ในระบบ");
     }
     
     // Check password against hash, or default password (user_id)
+    const storedHash = user.password_hash || user.password_hasl || '';
     const salt = user.salt || 'default_salt';
     const hashedInput = Security.hashPassword(inputPassword, salt);
     const defaultHashed = Security.hashPassword(user.user_id, salt);
     
-    const isPasswordCorrect = (user.password_hash && hashedInput === user.password_hash) ||
-                              (inputPassword === user.user_id) ||
-                              (!user.password_hash && hashedInput === defaultHashed);
+    const isPasswordCorrect = (storedHash && hashedInput === storedHash) ||
+                              (inputPassword === String(user.user_id).trim()) ||
+                              (!storedHash && (hashedInput === defaultHashed || inputPassword === String(user.user_id).trim()));
     
     if (!isPasswordCorrect) {
-      throw new Error("รหัสพนักงานหรือรหัสผ่านไม่ถูกต้อง");
+      throw new Error("รหัสผ่านไม่ถูกต้อง (ค่าเริ่มต้นคือรหัสพนักงานของคุณ)");
     }
     
     const token = Utilities.getUuid() + "-" + Utilities.getUuid();

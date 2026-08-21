@@ -42,7 +42,9 @@ const Database = (function() {
           }
 
           for (const key in filters) {
-            if (obj[key] != filters[key]) {
+            const val1 = String(obj[key] !== undefined && obj[key] !== null ? obj[key] : '').trim().toUpperCase();
+            const val2 = String(filters[key] !== undefined && filters[key] !== null ? filters[key] : '').trim().toUpperCase();
+            if (val1 !== val2) {
               match = false;
               break;
             }
