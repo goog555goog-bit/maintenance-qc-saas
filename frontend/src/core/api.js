@@ -1,14 +1,18 @@
 import { CONFIG } from '../config';
 
 export const getGasUrl = () => {
+  const localUrl = localStorage.getItem('gas_api_url');
+  if (localUrl && localUrl.trim().startsWith('https://script.google.com/')) {
+    return localUrl.trim();
+  }
   if (CONFIG && CONFIG.GAS_API_URL && !CONFIG.GAS_API_URL.includes('ใส่_URL')) {
     return CONFIG.GAS_API_URL.trim();
   }
-  return import.meta.env.VITE_GAS_URL || localStorage.getItem('gas_api_url') || '';
+  return import.meta.env.VITE_GAS_URL || '';
 };
 
 export const setGasUrl = (url) => {
-  if (url) {
+  if (url && url.trim()) {
     localStorage.setItem('gas_api_url', url.trim());
   } else {
     localStorage.removeItem('gas_api_url');

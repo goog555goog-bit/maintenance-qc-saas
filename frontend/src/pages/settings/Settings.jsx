@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Settings as SettingsIcon, Database, Inbox, Loader2, Users, Briefcase, Plus, Trash2, Tag } from 'lucide-react';
-import { apiCall } from '@/core/api';
+import { Save, Settings as SettingsIcon, Database, Inbox, Loader2, Users, Briefcase, Plus, Trash2, Tag, Globe, Link2, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { apiCall, getGasUrl, setGasUrl } from '@/core/api';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('workTypes');
@@ -34,6 +34,11 @@ export default function Settings() {
     intervalDays: 30
   });
 
+  // Connection state
+  const [gasEndpoint, setGasEndpoint] = useState(getGasUrl());
+  const [testStatus, setTestStatus] = useState(null);
+  const [testMessage, setTestMessage] = useState('');
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
@@ -64,6 +69,48 @@ export default function Settings() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleTestConnection = async (urlToTest) => {
+    const targetUrl = (urlToTest || gasEndpoint || '').trim();
+    if (!targetUrl) {
+      setTestStatus('error');
+      setTestMessage('กรุณาระบุ URL ของ Google Apps Script');
+      return;
+    }
+    setTestStatus('testing');
+    setTestMessage('กำลังทดสอบการเชื่อมต่อไปยัง Google Apps Script...');
+    try {
+      const res = await fetch(targetUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'work_type.list', payload: {} })
+      });
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error('การเชื่อมต่อตอบกลับเป็น HTML (ไม่ใช่ JSON) - กรุณาตรวจสอบการตั้งค่า Deploy: Execute as = Me และ Who has access = Anyone หรือตรวจสอบว่า URL ถูกต้อง');
+      }
+      if (data && data.success) {
+        setTestStatus('success');
+        setTestMessage('เชื่อมต่อสำเร็จ 100%! Google Apps Script ตอบกลับเป็นปกติ');
+      } else {
+        throw new Error(data?.error || 'เซิร์ฟเวอร์ตอบกลับไม่สำเร็จ');
+      }
+    } catch (err) {
+      setTestStatus('error');
+      setTestMessage(err.message || 'ไม่สามารถเชื่อมต่อได้ (HTTP 404 Not Found หรือ URL ไม่ถูกต้อง)');
+    }
+  };
+
+  const handleSaveGasUrl = (e) => {
+    e.preventDefault();
+    if (!gasEndpoint.trim()) return;
+    setGasUrl(gasEndpoint.trim());
+    setSuccessMessage('บันทึก URL การเชื่อมต่อ Google Apps Script เรียบร้อยแล้ว');
+    setTimeout(() => setSuccessMessage(''), 4000);
   };
 
   useEffect(() => {
@@ -224,6 +271,13 @@ export default function Settings() {
           >
             <Database className="w-4 h-4" />
             <span>ระบบสำรองข้อมูล</span>
+          </button>
+          <button 
+            onClick={() => setActiveTab('connection')} 
+            className={`p-4 text-left text-sm font-medium border-b border-slate-200 flex items-center gap-2 ${activeTab === 'connection' ? 'bg-white text-blue-600 border-l-4 border-l-blue-600' : 'text-slate-600 hover:bg-slate-100'}`}
+          >
+            <Globe className="w-4 h-4" />
+            <span>การเชื่อมต่อ Google Apps Script</span>
           </button>
         </div>
 
@@ -473,6 +527,99 @@ export default function Settings() {
                 >
                   <Save className="h-4 w-4" /> บันทึกการตั้งค่า
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: GOOGLE APPS SCRIPT CONNECTION */}
+          {activeTab === 'connection' && (
+            <div className="flex-1 flex flex-col space-y-6">
+              <div>
+                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <Globe className="w-5 h-5 text-blue-600" />
+                  <span>การเชื่อมต่อ Google Apps Script Web App</span>
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  กำหนดและทดสอบ Web App URL ของ Google Apps Script สำหรับเชื่อมต่อฐานข้อมูล Google Sheets
+                </p>
+              </div>
+
+              {testStatus && (
+                <div className={`p-4 rounded-xl text-xs flex items-center gap-2 border ${
+                  testStatus === 'testing' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                  testStatus === 'success' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' :
+                  'bg-rose-50 text-rose-800 border-rose-200'
+                }`}>
+                  {testStatus === 'testing' && <Loader2 className="w-4 h-4 animate-spin shrink-0 text-blue-600" />}
+                  {testStatus === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
+                  {testStatus === 'error' && <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />}
+                  <span className="font-medium">{testMessage}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSaveGasUrl} className="space-y-4 max-w-2xl bg-slate-50/70 p-5 rounded-2xl border border-slate-200">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Google Apps Script Web App URL (ลงท้ายด้วย /exec) *
+                  </label>
+                  <div className="relative">
+                    <input 
+                      type="url"
+                      required
+                      placeholder="https://script.google.com/macros/s/AKfycb.../exec"
+                      value={gasEndpoint}
+                      onChange={(e) => setGasEndpoint(e.target.value)}
+                      className="w-full pl-3 pr-24 py-2.5 text-xs font-mono border border-slate-300 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleTestConnection(gasEndpoint)}
+                      disabled={testStatus === 'testing'}
+                      className="absolute right-1.5 top-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-[11px] font-semibold rounded-md transition-colors disabled:opacity-50"
+                    >
+                      {testStatus === 'testing' ? 'กำลังทดสอบ...' : 'ทดสอบ URL'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                  <button
+                    type="submit"
+                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-xs transition-colors"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>บันทึก URL ใหม่</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      localStorage.removeItem('gas_api_url');
+                      setGasEndpoint(getGasUrl());
+                      setSuccessMessage('รีเซ็ต URL กลับเป็นค่าเริ่มต้นเรียบร้อยแล้ว');
+                      setTimeout(() => setSuccessMessage(''), 3000);
+                    }}
+                    className="border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold px-4 py-2.5 rounded-xl transition-colors"
+                  >
+                    รีเซ็ตเป็นค่าเริ่มต้น
+                  </button>
+                </div>
+              </form>
+
+              {/* Instructions card */}
+              <div className="bg-blue-50/50 border border-blue-200 rounded-2xl p-5 space-y-3 max-w-2xl text-xs text-slate-700">
+                <h3 className="font-bold text-blue-900 flex items-center gap-1.5">
+                  <Link2 className="w-4 h-4 text-blue-600" />
+                  <span>วิธีตั้งค่าและนำ Web App URL มาใช้งาน:</span>
+                </h3>
+                <ol className="list-decimal pl-5 space-y-1.5 leading-relaxed text-slate-600">
+                  <li>เปิดโปรเจกต์ <strong>Google Apps Script</strong> ของคุณ</li>
+                  <li>กดปุ่มสีน้ำเงิน <strong>"ทำให้ใช้งานได้" (Deploy)</strong> ด้านบนขวา</li>
+                  <li>เลือก <strong>"จัดการการทำให้ใช้งานได้" (Manage deployments)</strong></li>
+                  <li>กดรูปดินสอ <strong>"แก้ไข" (Edit)</strong> ด้านขวา</li>
+                  <li>เลือก <strong>เวอร์ชัน (Version): "เวอร์ชันใหม่" (New version)</strong></li>
+                  <li>ตรวจสอบว่า <strong>ผู้มีสิทธิ์เข้าถึง (Who has access) = "ทุกคน" (Anyone)</strong></li>
+                  <li>กด <strong>"ทำให้ใช้งานได้" (Deploy)</strong> แล้วคัดลอก <strong>URL ของเว็บแอป (Web App URL)</strong> มาวางในช่องด้านบน</li>
+                </ol>
               </div>
             </div>
           )}
