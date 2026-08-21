@@ -81,24 +81,38 @@ const Auth = {
   verifyToken: function(token) {
     if (!token) return null;
     
-    const hashedToken = Security.hashToken(token);
+    const rawToken = String(token).replace(/^'+/, '').trim();
+    const hashedToken = Security.hashToken(rawToken);
     const db = Database.getInstance();
-    const sessions = db.query('Sessions', { token: hashedToken, active: 'TRUE' });
     
-    if (sessions.length === 0) return null;
+    const allSessions = db.query('Sessions');
+    const session = allSessions.find(function(s) {
+      const isSessionActive = s.active === undefined || s.active === null || String(s.active).toUpperCase() === 'TRUE';
+      const sToken = String(s.token || '').replace(/^'+/, '').trim();
+      return isSessionActive && (sToken === hashedToken || sToken === rawToken);
+    });
     
-    const session = sessions[0];
-    if (new Date(session.expires_at) < new Date()) {
-      db.update('Sessions', 'session_id', session.session_id, { active: 'FALSE' });
+    if (!session) return null;
+    
+    if (session.expires_at && new Date(session.expires_at) < new Date()) {
+      try {
+        db.update('Sessions', 'session_id', session.session_id, { active: 'FALSE' });
+      } catch (e) {}
       return null;
     }
     
-    const users = db.query('Users', { user_id: session.user_id, active: 'TRUE' });
-    if (users.length === 0) return null;
+    const allUsers = db.query('Users');
+    const user = allUsers.find(function(u) {
+      return u.user_id && String(u.user_id).trim().toLowerCase() === String(session.user_id).trim().toLowerCase();
+    });
     
-    const user = users[0];
+    if (!user) return null;
+    
+    const isUserActive = user.active === undefined || user.active === null || String(user.active).toUpperCase() === 'TRUE';
+    if (!isUserActive) return null;
+    
     return {
-      user_id: user.user_id,
+      user_id: String(user.user_id).trim(),
       role: user.role,
       username: user.username || user.user_id,
       email: user.email || ''

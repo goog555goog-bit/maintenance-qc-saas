@@ -32,6 +32,14 @@ export async function apiCall(action, payload = {}) {
 
     const data = await res.json();
     if (!data.success) {
+      if (data.error === 'Unauthorized' || (typeof data.error === 'string' && data.error.includes('Unauthorized'))) {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
+        localStorage.removeItem('auth_token_expiry');
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+      }
       throw new Error(data.error || 'Request failed');
     }
     return data.data;
