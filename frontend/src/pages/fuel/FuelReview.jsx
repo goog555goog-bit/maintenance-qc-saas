@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Map, MapPin, Inbox, Loader2 } from 'lucide-react';
+import { Fuel, CheckCircle2, XCircle, Loader2, AlertCircle, Eye, X, ArrowRight } from 'lucide-react';
 import { apiCall } from '@/core/api';
 
 export default function FuelReview() {
@@ -72,155 +72,174 @@ export default function FuelReview() {
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-slate-800 mb-6">ตรวจสอบและอนุมัติการขอปรับค่าน้ำมัน</h1>
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-slate-800">ตรวจสอบและอนุมัติการขอปรับค่าน้ำมัน</h1>
+        <p className="text-xs text-slate-500 mt-0.5">พิจารณาคำขอปรับค่าน้ำมันเนื่องจากเหตุสุดวิสัย เช่น เส้นทางปิดซ่อม หรือเปลี่ยนจุดนัดหมาย</p>
+      </div>
       
       {error && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6 border border-red-200">
-          {error}
+        <div className="p-4 bg-rose-50 text-rose-700 text-xs rounded-xl border border-rose-200 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{error}</span>
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-x-auto flex flex-col min-h-[400px]">
-        <table className="w-full text-left border-collapse min-w-[900px]">
-          <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="p-4 text-sm font-semibold text-slate-600">รหัสใบงาน</th>
-              <th className="p-4 text-sm font-semibold text-slate-600">ทีมช่าง</th>
-              <th className="p-4 text-sm font-semibold text-slate-600">ระยะทางระบบ</th>
-              <th className="p-4 text-sm font-semibold text-slate-600">ค่าน้ำมันระบบ</th>
-              <th className="p-4 text-sm font-semibold text-slate-600">ระยะทางที่ขอปรับ</th>
-              <th className="p-4 text-sm font-semibold text-slate-600">ค่าน้ำมันที่ขอปรับ</th>
-              <th className="p-4 text-sm font-semibold text-slate-600">สถานะ</th>
-              <th className="p-4 text-sm font-semibold text-slate-600">จัดการ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {fuelRequests.map((req) => (
-              <tr key={req.adjustment_id || req.id} className="border-b border-slate-100 hover:bg-slate-50">
-                <td className="p-4 text-sm font-semibold text-slate-800">{req.ticket_id || req.ticketId}</td>
-                <td className="p-4 text-sm text-slate-600">{req.team_name || req.teamName}</td>
-                <td className="p-4 text-sm text-slate-600">{req.system_distance || req.systemDistance} กม.</td>
-                <td className="p-4 text-sm text-slate-600">{req.system_amount || req.systemAmount} บาท</td>
-                <td className="p-4 text-sm font-bold text-amber-600">{req.adjusted_distance || req.adjustedDistance} กม.</td>
-                <td className="p-4 text-sm font-bold text-amber-600">{req.adjusted_amount || req.adjustedAmount} บาท</td>
-                <td className="p-4 text-sm">
-                  {req.status === 'APPROVED' ? (
-                    <span className="bg-green-50 text-green-700 px-2 py-0.5 rounded text-xs font-semibold">อนุมัติแล้ว</span>
-                  ) : req.status === 'REJECTED' ? (
-                    <span className="bg-red-50 text-red-700 px-2 py-0.5 rounded text-xs font-semibold">ปฏิเสธแล้ว</span>
-                  ) : (
-                    <span className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded text-xs font-semibold">รอการอนุมัติ</span>
-                  )}
-                </td>
-                <td className="p-4">
-                  {(!req.status || req.status === 'PENDING') && (
-                    <button onClick={() => openReviewModal(req)} className="text-blue-600 hover:text-blue-800 text-sm font-medium">ตรวจสอบ</button>
-                  )}
-                </td>
+      {/* Table */}
+      <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden">
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+          <h2 className="text-base font-bold text-slate-800">รายการคำขอปรับค่าน้ำมัน</h2>
+          <span className="text-xs font-mono font-semibold bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200">
+            {fuelRequests.length} รายการ
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-400 uppercase bg-slate-50/70">
+                <th className="py-3 px-4">รหัสใบงาน</th>
+                <th className="py-3 px-4">ค่าน้ำมันเดิม (ระบบ)</th>
+                <th className="py-3 px-4">ค่าน้ำมันที่ขอปรับ</th>
+                <th className="py-3 px-4">เหตุผลการขอปรับ</th>
+                <th className="py-3 px-4">สถานะ</th>
+                <th className="py-3 px-4 text-right">การจัดการ</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {isLoading && (
-          <div className="flex justify-center items-center flex-1 py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-          </div>
-        )}
-
-        {fuelRequests.length === 0 && !isLoading && (
-          <div className="flex flex-col items-center justify-center flex-1 py-16 text-slate-500">
-            <Inbox className="h-16 w-16 text-slate-200 mb-4" />
-            <p className="text-lg font-medium text-slate-600">ไม่มีรายการขอปรับปรุงค่าน้ำมัน</p>
-            <p className="text-sm text-slate-400 mt-1">รายการขอปรับปรุงค่าน้ำมันจากช่างเทคนิคจะปรากฏที่นี่</p>
-          </div>
-        )}
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {isLoading ? (
+                <tr>
+                  <td colSpan="6" className="py-16 text-center text-slate-400">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-600" />
+                    <span>กำลังโหลดรายการ...</span>
+                  </td>
+                </tr>
+              ) : fuelRequests.length > 0 ? (
+                fuelRequests.map((req) => (
+                  <tr key={req.adjustment_id || req.id} className="hover:bg-slate-50/60 transition-colors">
+                    <td className="py-3.5 px-4 font-mono font-bold text-blue-600">
+                      {req.ticket_id || req.ticketId}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-600">
+                      {Number(req.system_amount || req.systemAmount || 0).toFixed(2)} บาท
+                    </td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-amber-700">
+                      {Number(req.adjusted_amount || req.adjustedAmount || 0).toFixed(2)} บาท
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-600 max-w-xs truncate">
+                      {req.reason || '-'}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      {req.status === 'APPROVED' ? (
+                        <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full text-[10px] font-semibold">อนุมัติแล้ว</span>
+                      ) : req.status === 'REJECTED' ? (
+                        <span className="bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-0.5 rounded-full text-[10px] font-semibold">ไม่อนุมัติ</span>
+                      ) : (
+                        <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-0.5 rounded-full text-[10px] font-semibold">รอการอนุมัติ</span>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      {(!req.status || req.status === 'PENDING') && (
+                        <button 
+                          onClick={() => openReviewModal(req)} 
+                          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-3 py-1.5 rounded-lg inline-flex items-center gap-1 transition-colors shadow-xs"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>พิจารณา</span>
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" className="py-16 text-center text-slate-400">
+                    <Fuel className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+                    <p className="font-medium text-sm text-slate-600">ไม่มีรายการขอปรับปรุงค่าน้ำมันที่ค้างอยู่</p>
+                    <p className="text-xs text-slate-400 mt-1">เมื่อช่างเทคนิคส่งคำขอปรับค่าน้ำมัน รายการจะปรากฏที่นี่</p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
+      {/* Review Modal */}
       {showModal && selectedRequest && (
-        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-lg overflow-hidden">
-            <div className="p-4 border-b border-slate-200">
-              <h3 className="text-lg font-bold text-slate-800">ตรวจสอบการขอปรับค่าน้ำมัน</h3>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden border border-slate-200">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h3 className="text-sm font-bold text-slate-800">พิจารณาการขอปรับค่าน้ำมัน</h3>
+              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 p-1">
+                <X className="w-4 h-4" />
+              </button>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
+            
+            <div className="p-6 space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
                 <div>
-                  <p className="text-slate-500 mb-1">รหัสใบงาน</p>
-                  <p className="font-semibold text-slate-800">{selectedRequest.ticket_id || selectedRequest.ticketId}</p>
+                  <p className="text-slate-400 text-[11px]">รหัสใบงาน</p>
+                  <p className="font-mono font-bold text-slate-800 text-sm mt-0.5">{selectedRequest.ticket_id}</p>
                 </div>
                 <div>
-                  <p className="text-slate-500 mb-1">ทีมช่าง</p>
-                  <p className="font-semibold text-slate-800">{selectedRequest.team_name || selectedRequest.teamName}</p>
+                  <p className="text-slate-400 text-[11px]">ค่าน้ำมันที่ระบบคำนวณ</p>
+                  <p className="font-semibold text-slate-700 mt-0.5">{selectedRequest.system_amount || 0} บาท</p>
                 </div>
-                <div>
-                  <p className="text-slate-500 mb-1">ระยะทางระบบ</p>
-                  <p className="text-slate-800">{selectedRequest.system_distance || selectedRequest.systemDistance} กม.</p>
+                <div className="col-span-2 pt-2 border-t border-slate-200/60">
+                  <p className="text-slate-400 text-[11px]">จำนวนเงินที่ขอปรับใหม่</p>
+                  <p className="font-mono font-bold text-amber-700 text-base mt-0.5">{selectedRequest.adjusted_amount} บาท</p>
                 </div>
-                <div>
-                  <p className="text-slate-500 mb-1">ค่าน้ำมันระบบ</p>
-                  <p className="text-slate-800">{selectedRequest.system_amount || selectedRequest.systemAmount} บาท</p>
-                </div>
-                <div>
-                  <p className="text-slate-500 mb-1">ระยะทางที่ขอปรับ</p>
-                  <p className="font-bold text-amber-600">{selectedRequest.adjusted_distance || selectedRequest.adjustedDistance} กม.</p>
-                </div>
-                <div>
-                  <p className="text-slate-500 mb-1">ค่าน้ำมันที่ขอปรับ</p>
-                  <p className="font-bold text-amber-600">{selectedRequest.adjusted_amount || selectedRequest.adjustedAmount} บาท</p>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-slate-700 mb-1">เหตุผลในการขอปรับ:</p>
+                <div className="p-3 bg-white border border-slate-200 rounded-xl text-slate-700 leading-relaxed">
+                  {selectedRequest.reason || 'ไม่มีการระบุเหตุผล'}
                 </div>
               </div>
 
               {isRejecting && (
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">เหตุผลที่ปฏิเสธ</label>
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-rose-700">ระบุเหตุผลที่ไม่อนุมัติ *</label>
                   <textarea
+                    rows={3}
+                    placeholder="กรุณาระบุเหตุผลการไม่อนุมัติ..."
                     value={rejectReason}
                     onChange={(e) => setRejectReason(e.target.value)}
-                    className="w-full rounded-md border border-slate-300 p-2 text-sm focus:border-red-500 focus:ring-red-500"
-                    rows={3}
-                    placeholder="โปรดระบุเหตุผล..."
+                    className="w-full p-2.5 border border-rose-300 rounded-xl outline-none focus:border-rose-500 bg-rose-50/20"
                   />
                 </div>
               )}
-            </div>
-            
-            <div className="p-4 border-t border-slate-200 flex justify-end gap-2 bg-slate-50">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-md text-sm font-medium"
-              >
-                ยกเลิก
-              </button>
-              {!isRejecting ? (
-                <>
-                  <button
-                    onClick={handleReject}
-                    disabled={actionLoading}
-                    className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-md text-sm font-medium"
-                  >
-                    ปฏิเสธ
-                  </button>
-                  <button
-                    onClick={handleApprove}
-                    disabled={actionLoading}
-                    className="px-4 py-2 bg-green-600 text-white hover:bg-green-700 rounded-md text-sm font-medium flex items-center"
-                  >
-                    {actionLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                    อนุมัติ
-                  </button>
-                </>
-              ) : (
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
-                  onClick={handleReject}
-                  disabled={actionLoading || !rejectReason.trim()}
-                  className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-md text-sm font-medium flex items-center"
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 border border-slate-300 rounded-xl font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
                 >
-                  {actionLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                  ยืนยันการปฏิเสธ
+                  ปิด
                 </button>
-              )}
+                <button
+                  type="button"
+                  disabled={actionLoading}
+                  onClick={handleReject}
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-semibold transition-colors shadow-xs disabled:bg-rose-300"
+                >
+                  {isRejecting ? 'ยืนยันปฏิเสธ' : 'ไม่อนุมัติ'}
+                </button>
+                {!isRejecting && (
+                  <button
+                    type="button"
+                    disabled={actionLoading}
+                    onClick={handleApprove}
+                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold transition-colors shadow-xs disabled:bg-emerald-300"
+                  >
+                    อนุมัติการขอปรับ
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -228,4 +247,3 @@ export default function FuelReview() {
     </div>
   );
 }
-

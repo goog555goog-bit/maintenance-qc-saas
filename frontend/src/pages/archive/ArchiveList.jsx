@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Archive, Inbox, Loader2, Download } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Search, Archive, Download, Loader2, Ticket, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 import { apiCall } from '@/core/api';
 
 export default function ArchiveList() {
@@ -27,87 +27,144 @@ export default function ArchiveList() {
     }
   };
 
-  const filteredArchives = archives.filter(item => 
-    (item.code && item.code.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (item.title && item.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (item.team && item.team.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredArchives = archives.filter(item => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    const matchId = item.ticket_id && String(item.ticket_id).toLowerCase().includes(q);
+    const matchBranch = item.branch_name && String(item.branch_name).toLowerCase().includes(q);
+    const matchOverview = item.overview && String(item.overview).toLowerCase().includes(q);
+    const matchTeam = item.team_name && String(item.team_name).toLowerCase().includes(q);
+    return matchId || matchBranch || matchOverview || matchTeam;
+  });
+
+  const handleExportCSV = () => {
+    if (filteredArchives.length === 0) return;
+    const headers = ['รหัสใบงาน', 'สาขา', 'หมวดหมู่งาน', 'ทีมช่าง', 'วันที่ปิดงาน', 'สถานะ'];
+    const rows = filteredArchives.map(a => [
+      `"${a.ticket_id}"`,
+      `"${a.branch_name || ('สาขา ' + a.branch_id)}"`,
+      `"${a.category_name || '-'}"`,
+      `"${a.team_name || '-'}"`,
+      `"${a.created_at ? new Date(a.created_at).toLocaleDateString('th-TH') : '-'}"`,
+      `"${a.status}"`
+    ]);
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `archived_tickets_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
-    <div className="p-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
-        <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-          <Archive className="h-6 w-6 text-slate-500" /> คลังข้อมูลใบงานที่ปิดแล้ว (Archive)
-        </h1>
-        <button className="flex items-center gap-2 border border-slate-300 bg-white px-4 py-2 rounded-md hover:bg-slate-50 text-sm font-medium text-slate-700 shadow-sm">
-          <Download className="h-4 w-4" /> ส่งออกข้อมูล
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">คลังข้อมูลใบงานที่ปิดแล้ว (Archive)</h1>
+          <p className="text-xs text-slate-500 mt-0.5">ค้นหาและสืบค้นประวัติใบงานแจ้งซ่อมที่ปิดงานสมบูรณ์แล้วในระบบ</p>
+        </div>
+        <button 
+          onClick={handleExportCSV}
+          disabled={filteredArchives.length === 0}
+          className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-1.5 transition-colors shadow-xs self-start sm:self-auto disabled:opacity-50"
+        >
+          <Download className="w-4 h-4" />
+          <span>ส่งออกประวัติ CSV</span>
         </button>
       </div>
 
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-6 flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+      {/* Search Bar */}
+      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
           <input 
             type="text" 
-            placeholder="ค้นหาข้อมูล..." 
+            placeholder="ค้นหารหัสใบงาน, ชื่อสาขา, หรือทีมช่าง..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 w-full rounded-md border border-slate-300 p-2 text-sm focus:border-blue-500 focus:ring-blue-500" 
+            className="pl-9 pr-3 py-2 w-full text-xs border border-slate-300 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white" 
           />
         </div>
-        <button className="flex items-center gap-2 border border-slate-300 px-3 py-2 rounded-md hover:bg-slate-50 bg-white text-sm font-medium">
-          <Filter className="h-4 w-4" /> ตัวกรอง
-        </button>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-x-auto min-h-[400px] flex flex-col">
-        <table className="w-full text-left border-collapse min-w-[800px]">
-          <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="p-3 text-sm font-semibold text-slate-600">รหัสใบงาน</th>
-              <th className="p-3 text-sm font-semibold text-slate-600">หัวข้อ</th>
-              <th className="p-3 text-sm font-semibold text-slate-600">หมวดหมู่</th>
-              <th className="p-3 text-sm font-semibold text-slate-600">วันที่ปิดงาน</th>
-              <th className="p-3 text-sm font-semibold text-slate-600">ทีมช่าง</th>
-              <th className="p-3 text-sm font-semibold text-slate-600">สถานะ</th>
-              <th className="p-3 text-sm font-semibold text-slate-600">จัดการ</th>
-            </tr>
-          </thead>
-          {!loading && filteredArchives.length > 0 && (
-            <tbody>
-              {filteredArchives.map(item => (
-                <tr key={item.id || item.code} className="border-b border-slate-100 hover:bg-slate-50">
-                  <td className="p-3 text-sm font-mono text-slate-800">{item.code}</td>
-                  <td className="p-3 text-sm text-slate-600">{item.title}</td>
-                  <td className="p-3 text-sm text-slate-600">{item.category || '-'}</td>
-                  <td className="p-3 text-sm text-slate-600">{item.closedDate || item.updatedAt || '-'}</td>
-                  <td className="p-3 text-sm text-slate-600">{item.team || '-'}</td>
-                  <td className="p-3 text-sm">
-                    <span className="bg-slate-200 text-slate-700 px-2 py-1 rounded text-xs font-bold">ปิดงานแล้ว</span>
-                  </td>
-                  <td className="p-3">
-                    <button onClick={() => navigate(`/tickets/${item.code}`)} className="text-blue-600 hover:text-blue-800 text-sm font-medium">ดูข้อมูล (Read-only)</button>
+      {/* Table */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-400 uppercase bg-slate-50/70">
+                <th className="py-3 px-4">รหัสใบงาน</th>
+                <th className="py-3 px-4">สาขา</th>
+                <th className="py-3 px-4">หมวดหมู่งาน</th>
+                <th className="py-3 px-4">ทีมช่างผู้ดูแล</th>
+                <th className="py-3 px-4">วันที่แจ้ง</th>
+                <th className="py-3 px-4">สถานะ</th>
+                <th className="py-3 px-4 text-right">การจัดการ</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {loading ? (
+                <tr>
+                  <td colSpan="7" className="py-16 text-center text-slate-400">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-600" />
+                    <span>กำลังโหลดคลังข้อมูลใบงาน...</span>
                   </td>
                 </tr>
-              ))}
+              ) : filteredArchives.length > 0 ? (
+                filteredArchives.map(item => (
+                  <tr 
+                    key={item.ticket_id} 
+                    className="hover:bg-slate-50/60 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/tickets/${item.ticket_id}`)}
+                  >
+                    <td className="py-3.5 px-4 font-mono font-bold text-blue-600">
+                      {item.ticket_id}
+                    </td>
+                    <td className="py-3.5 px-4 font-medium text-slate-800">
+                      {item.branch_name || ('สาขา ' + item.branch_id)}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-600">
+                      {item.category_name || item.work_type_name || '-'}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-500">
+                      {item.team_name || item.team || '-'}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-400">
+                      {item.created_at ? new Date(item.created_at).toLocaleDateString('th-TH') : '-'}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200 flex items-center gap-1 w-fit">
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>ปิดงานสมบูรณ์</span>
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <Link 
+                        to={`/tickets/${item.ticket_id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-xs font-semibold text-blue-600 hover:text-blue-800"
+                      >
+                        เปิดดู
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="7" className="py-16 text-center text-slate-400">
+                    <Archive className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+                    <p className="font-medium text-sm text-slate-600">ยังไม่มีรายการใบงานในคลังประวัติ</p>
+                    <p className="text-xs text-slate-400 mt-1">ใบงานที่ได้รับการอนุมัติปิดงานสมบูรณ์จะแสดงขึ้นที่นี่</p>
+                  </td>
+                </tr>
+              )}
             </tbody>
-          )}
-        </table>
-        
-        {loading && (
-          <div className="flex flex-col items-center justify-center flex-1 py-16 text-slate-500">
-            <Loader2 className="h-8 w-8 animate-spin text-slate-300 mb-4" />
-            <p className="text-sm font-medium text-slate-600">กำลังโหลดข้อมูล...</p>
-          </div>
-        )}
-
-        {!loading && filteredArchives.length === 0 && (
-          <div className="flex flex-col items-center justify-center flex-1 py-16 text-slate-500">
-            <Inbox className="h-16 w-16 text-slate-200 mb-4" />
-            <p className="text-lg font-medium text-slate-600">ไม่พบข้อมูลใบงาน</p>
-            <p className="text-sm text-slate-400 mt-1">ยังไม่มีใบงานที่ปิดแล้ว หรือไม่พบผลลัพธ์จากการค้นหา</p>
-          </div>
-        )}
+          </table>
+        </div>
       </div>
     </div>
   );

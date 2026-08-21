@@ -1,8 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { 
+  Plus, 
+  Search, 
+  Filter, 
+  LayoutList, 
+  Kanban, 
+  ArrowUpDown, 
+  Building2, 
+  Calendar,
+  AlertCircle,
+  Loader2,
+  Ticket
+} from 'lucide-react';
 import { apiCall } from '../../core/api';
 
-const TicketList = () => {
+export default function TicketList() {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState('table');
   const [tickets, setTickets] = useState([]);
@@ -10,12 +23,11 @@ const TicketList = () => {
   const [workTypes, setWorkTypes] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterBranch, setFilterBranch] = useState('');
-  const [filterTeam, setFilterTeam] = useState('');
-  const [filterWorkType, setFilterWorkType] = useState('');
   const [filterPriority, setFilterPriority] = useState('');
-  const [filterDate, setFilterDate] = useState('');
+  const [filterWorkType, setFilterWorkType] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -24,7 +36,7 @@ const TicketList = () => {
         const [ticketsRes, branchesRes, workTypesRes] = await Promise.all([
           apiCall('ticket.list'),
           apiCall('branch.list'),
-          apiCall('work_type.list').catch(() => ({ data: [] }))
+          apiCall('work_type.list').catch(() => [])
         ]);
         const toArray = (v) => Array.isArray(v) ? v : (Array.isArray(v?.tickets) ? v.tickets : (Array.isArray(v?.data) ? v.data : []));
         setTickets(toArray(ticketsRes));
@@ -40,162 +52,305 @@ const TicketList = () => {
   }, []);
 
   const filteredTickets = tickets.filter(t => {
+    const query = searchQuery.trim().toLowerCase();
+    if (query) {
+      const matchId = t.ticket_id && String(t.ticket_id).toLowerCase().includes(query);
+      const matchBranch = t.branch_name && String(t.branch_name).toLowerCase().includes(query);
+      const matchOverview = t.overview && String(t.overview).toLowerCase().includes(query);
+      if (!matchId && !matchBranch && !matchOverview) return false;
+    }
     if (filterStatus && t.status !== filterStatus) return false;
     if (filterBranch && String(t.branch_id) !== String(filterBranch)) return false;
     if (filterWorkType && String(t.work_type_id) !== String(filterWorkType)) return false;
     if (filterPriority && t.priority !== filterPriority) return false;
-    if (filterTeam && String(t.team_id) !== String(filterTeam)) return false;
-    if (filterDate && (!t.created_at || !t.created_at.startsWith(filterDate))) return false;
     return true;
   });
 
+  const getStatusBadge = (status) => {
+    const map = {
+      NEW: { label: 'แจ้งใหม่', bg: 'bg-blue-50 text-blue-700 border-blue-200' },
+      SUBMITTED: { label: 'แจ้งใหม่', bg: 'bg-blue-50 text-blue-700 border-blue-200' },
+      WAITING_ASSIGNMENT: { label: 'รอจัดสรรช่าง', bg: 'bg-amber-50 text-amber-700 border-amber-200' },
+      ASSIGNED: { label: 'มอบหมายแล้ว', bg: 'bg-purple-50 text-purple-700 border-purple-200' },
+      IN_PROGRESS: { label: 'กำลังดำเนินงาน', bg: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+      COMPLETED_BY_TECH: { label: 'ช่างส่งงาน/รอตรวจ', bg: 'bg-teal-50 text-teal-700 border-teal-200' },
+      WAITING_REVIEW: { label: 'รอตรวจรับงาน', bg: 'bg-teal-50 text-teal-700 border-teal-200' },
+      REWORK: { label: 'ส่งกลับแก้ไข', bg: 'bg-rose-50 text-rose-700 border-rose-200' },
+      REJECTED_REWORK: { label: 'ส่งกลับแก้ไข', bg: 'bg-rose-50 text-rose-700 border-rose-200' },
+      COMPLETED: { label: 'ตรวจรับผ่าน', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+      CLOSED: { label: 'ปิดงานสมบูรณ์', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    };
+    const badge = map[status] || { label: status, bg: 'bg-slate-50 text-slate-700 border-slate-200' };
+    return (
+      <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${badge.bg}`}>
+        {badge.label}
+      </span>
+    );
+  };
+
+  const getPriorityBadge = (priority) => {
+    const map = {
+      URGENT: { label: 'ฉุกเฉิน', bg: 'bg-rose-50 text-rose-700 border-rose-200' },
+      HIGH: { label: 'เร่งด่วน', bg: 'bg-amber-50 text-amber-700 border-amber-200' },
+      NORMAL: { label: 'ปกติ', bg: 'bg-slate-50 text-slate-600 border-slate-200' },
+      LOW: { label: 'ต่ำ', bg: 'bg-slate-50 text-slate-500 border-slate-200' }
+    };
+    const badge = map[priority] || map.NORMAL;
+    return (
+      <span className={`text-[10px] font-medium px-2 py-0.5 rounded border ${badge.bg}`}>
+        {badge.label}
+      </span>
+    );
+  };
+
   return (
-    <div className="ticket-list p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">รายการใบแจ้งซ่อมทั้งหมด</h1>
-        <div className="view-toggles flex border rounded">
-          <button 
-            className={`px-4 py-2 ${viewMode === 'table' ? 'bg-blue-100 font-bold' : ''}`}
-            onClick={() => setViewMode('table')}
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">รายการใบงานแจ้งซ่อม</h1>
+          <p className="text-xs text-slate-500 mt-0.5">ค้นหา กรอง และติดตามสถานะความคืบหน้าของงานซ่อมทั้งหมดในระบบ</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* View Toggles */}
+          <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                viewMode === 'table' ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <LayoutList className="w-3.5 h-3.5" />
+              <span>ตาราง</span>
+            </button>
+            <button
+              onClick={() => setViewMode('kanban')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                viewMode === 'kanban' ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <Kanban className="w-3.5 h-3.5" />
+              <span>บอร์ดคัมบัง</span>
+            </button>
+          </div>
+
+          <Link
+            to="/tickets/new"
+            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-1.5 transition-colors shadow-xs"
           >
-            รูปแบบตาราง
-          </button>
-          <button 
-            className={`px-4 py-2 ${viewMode === 'kanban' ? 'bg-blue-100 font-bold' : ''}`}
-            onClick={() => setViewMode('kanban')}
-          >
-            รูปแบบคัมบัง (Kanban)
-          </button>
+            <Plus className="w-4 h-4" />
+            <span>สร้างใบแจ้งซ่อม</span>
+          </Link>
         </div>
       </div>
 
-      <div className="filters grid grid-cols-6 gap-2 mb-6">
-        <select className="border p-2 rounded" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-          <option value="">สถานะ</option>
-          <option value="NEW">รอจัดสรร</option>
-          <option value="IN_PROGRESS">กำลังดำเนินการ</option>
-          <option value="RESOLVED">รอตรวจรับ</option>
-        </select>
-        <select className="border p-2 rounded" value={filterBranch} onChange={(e) => setFilterBranch(e.target.value)}>
-          <option value="">สาขา</option>
-          {branches.map(b => (
-            <option key={b.branch_id} value={b.branch_id}>{b.name}</option>
-          ))}
-        </select>
-        <select className="border p-2 rounded" value={filterTeam} onChange={(e) => setFilterTeam(e.target.value)}>
-          <option value="">ทีมช่าง</option>
-        </select>
-        <select className="border p-2 rounded" value={filterWorkType} onChange={(e) => setFilterWorkType(e.target.value)}>
-          <option value="">หมวดหมู่</option>
-          {workTypes.map(wt => (
-            <option key={wt.work_type_id} value={wt.work_type_id}>{wt.name}</option>
-          ))}
-        </select>
-        <select className="border p-2 rounded" value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)}>
-          <option value="">ระดับความเร่งด่วน</option>
-          <option value="LOW">ต่ำ</option>
-          <option value="NORMAL">ปกติ</option>
-          <option value="HIGH">สูง</option>
-          <option value="URGENT">ด่วนที่สุด</option>
-        </select>
-        <input type="date" className="border p-2 rounded" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} />
+      {/* Filter Bar */}
+      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          {/* Search Box */}
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="ค้นหาเลขใบงาน, สาขา, อาการ..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
+            />
+          </div>
+
+          {/* Status Filter */}
+          <select
+            className="text-xs border border-slate-300 rounded-lg p-2 bg-white outline-none focus:border-blue-500"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+          >
+            <option value="">สถานะทั้งหมด</option>
+            <option value="NEW">แจ้งใหม่ (NEW)</option>
+            <option value="WAITING_ASSIGNMENT">รอจัดสรรทีมช่าง</option>
+            <option value="ASSIGNED">มอบหมายทีมช่างแล้ว</option>
+            <option value="IN_PROGRESS">กำลังดำเนินงาน</option>
+            <option value="COMPLETED_BY_TECH">รอตรวจรับงาน</option>
+            <option value="REJECTED_REWORK">งานตีกลับแก้ไข (Rework)</option>
+            <option value="CLOSED">ปิดงานสมบูรณ์</option>
+          </select>
+
+          {/* Branch Filter */}
+          <select
+            className="text-xs border border-slate-300 rounded-lg p-2 bg-white outline-none focus:border-blue-500"
+            value={filterBranch}
+            onChange={(e) => setFilterBranch(e.target.value)}
+          >
+            <option value="">สาขาทั้งหมด</option>
+            {branches.map(b => (
+              <option key={b.branch_id} value={b.branch_id}>
+                {b.branch_name} ({b.branch_id})
+              </option>
+            ))}
+          </select>
+
+          {/* Work Type Filter */}
+          <select
+            className="text-xs border border-slate-300 rounded-lg p-2 bg-white outline-none focus:border-blue-500"
+            value={filterWorkType}
+            onChange={(e) => setFilterWorkType(e.target.value)}
+          >
+            <option value="">หมวดหมู่งานทั้งหมด</option>
+            {workTypes.map(wt => (
+              <option key={wt.work_type_id} value={wt.work_type_id}>
+                {wt.work_type_name}
+              </option>
+            ))}
+          </select>
+
+          {/* Priority Filter */}
+          <select
+            className="text-xs border border-slate-300 rounded-lg p-2 bg-white outline-none focus:border-blue-500"
+            value={filterPriority}
+            onChange={(e) => setFilterPriority(e.target.value)}
+          >
+            <option value="">ความเร่งด่วนทั้งหมด</option>
+            <option value="NORMAL">ปกติ (NORMAL)</option>
+            <option value="HIGH">เร่งด่วน (HIGH)</option>
+            <option value="URGENT">ฉุกเฉิน (URGENT)</option>
+          </select>
+        </div>
       </div>
 
+      {/* Main Content View */}
       {loading ? (
-        <div className="flex justify-center items-center py-20">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+        <div className="flex justify-center items-center py-24">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       ) : viewMode === 'table' ? (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse border">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="p-3 border-b">รหัสใบงาน</th>
-                <th className="p-3 border-b">สาขา</th>
-                <th className="p-3 border-b">หมวดหมู่งาน</th>
-                <th className="p-3 border-b">สถานะ</th>
-                <th className="p-3 border-b">ทีมที่รับผิดชอบ</th>
-                <th className="p-3 border-b">วันที่สร้าง</th>
-                <th className="p-3 border-b">ความเร่งด่วน</th>
-                <th className="p-3 border-b">รอบการแก้ไข</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredTickets.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="p-8 text-center">
-                    <div className="flex flex-col items-center justify-center">
-                      <p className="text-lg font-medium text-gray-600 mb-2">ยังไม่มีข้อมูลใบงาน</p>
-                      <p className="text-sm text-gray-400">กดปุ่ม 'สร้างใบแจ้งซ่อมใหม่' เพื่อเริ่มต้น</p>
-                    </div>
-                  </td>
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-400 uppercase bg-slate-50/70">
+                  <th className="py-3 px-4">รหัสใบงาน</th>
+                  <th className="py-3 px-4">สาขา</th>
+                  <th className="py-3 px-4">หมวดหมู่งาน</th>
+                  <th className="py-3 px-4">สถานะ</th>
+                  <th className="py-3 px-4">ความเร่งด่วน</th>
+                  <th className="py-3 px-4">ทีมผู้รับผิดชอบ</th>
+                  <th className="py-3 px-4">วันที่แจ้ง</th>
+                  <th className="py-3 px-4 text-right">การจัดการ</th>
                 </tr>
-              ) : (
-                filteredTickets.map(ticket => (
-                  <tr 
-                    key={ticket.ticket_id} 
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => navigate('/tickets/' + ticket.ticket_id)}
-                  >
-                    <td className="p-3 border-b">{ticket.ticket_id}</td>
-                    <td className="p-3 border-b">{ticket.branch_name || ticket.branch_id}</td>
-                    <td className="p-3 border-b">{ticket.work_type_name || ticket.work_type_id}</td>
-                    <td className="p-3 border-b">{ticket.status}</td>
-                    <td className="p-3 border-b">{ticket.team_name || ticket.team_id || '-'}</td>
-                    <td className="p-3 border-b">{ticket.created_at ? new Date(ticket.created_at).toLocaleDateString() : '-'}</td>
-                    <td className="p-3 border-b">{ticket.priority}</td>
-                    <td className="p-3 border-b">-</td>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredTickets.length > 0 ? (
+                  filteredTickets.map(t => (
+                    <tr 
+                      key={t.ticket_id} 
+                      className="hover:bg-slate-50/70 cursor-pointer transition-colors"
+                      onClick={() => navigate(`/tickets/${t.ticket_id}`)}
+                    >
+                      <td className="py-3.5 px-4">
+                        <span className="font-mono font-bold text-blue-600">
+                          {t.ticket_id}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 font-medium text-slate-800">
+                        {t.branch_name || ('สาขา ' + t.branch_id)}
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-600">
+                        {t.category_name || t.work_type_name || '-'}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        {getStatusBadge(t.status)}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        {getPriorityBadge(t.priority)}
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-500">
+                        {t.team_name || t.team || '-'}
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-400">
+                        {t.created_at ? new Date(t.created_at).toLocaleDateString('th-TH') : '-'}
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <Link 
+                          to={`/tickets/${t.ticket_id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-xs font-semibold text-blue-600 hover:text-blue-800"
+                        >
+                          เปิดดู
+                        </Link>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="8" className="py-16 text-center text-slate-400">
+                      <Ticket className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+                      <p className="font-medium text-sm text-slate-600">ไม่พบรายการใบงานตามเงื่อนไขที่เลือก</p>
+                      <p className="text-xs text-slate-400 mt-1">ลองเปลี่ยนคำค้นหาหรือตัวกรองด้านบน</p>
+                    </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : (
-        <div className="kanban-board flex gap-4">
-          <div className="kanban-column flex-1 bg-gray-50 p-4 rounded min-h-[400px]">
-            <h3 className="font-bold border-b pb-2 mb-4">รอจัดสรร</h3>
-            {filteredTickets.filter(t => t.status === 'NEW' || t.status === 'รอจัดสรร').length === 0 ? (
-              <p className="text-center text-gray-500 mt-8">ยังไม่มีข้อมูลใบงาน</p>
-            ) : (
-              filteredTickets.filter(t => t.status === 'NEW' || t.status === 'รอจัดสรร').map(ticket => (
-                <div key={ticket.ticket_id} className="bg-white p-3 rounded shadow mb-3 cursor-pointer" onClick={() => navigate('/tickets/' + ticket.ticket_id)}>
-                  <div className="font-bold">{ticket.ticket_id}</div>
-                  <div className="text-sm text-gray-600">{ticket.branch_name || ticket.branch_id}</div>
+        /* Kanban Board */
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[
+            { key: 'WAITING_ASSIGNMENT', title: 'รอจัดสรรช่าง', filter: t => ['NEW', 'SUBMITTED', 'WAITING_ASSIGNMENT'].includes(t.status), color: 'border-amber-400' },
+            { key: 'IN_PROGRESS', title: 'กำลังดำเนินงาน', filter: t => ['ASSIGNED', 'IN_PROGRESS'].includes(t.status), color: 'border-blue-400' },
+            { key: 'WAITING_REVIEW', title: 'รอตรวจรับ / แก้ไข', filter: t => ['COMPLETED_BY_TECH', 'WAITING_REVIEW', 'REWORK', 'REJECTED_REWORK'].includes(t.status), color: 'border-purple-400' },
+            { key: 'CLOSED', title: 'ปิดงานสมบูรณ์', filter: t => ['COMPLETED', 'CLOSED'].includes(t.status), color: 'border-emerald-400' }
+          ].map(col => {
+            const colTickets = filteredTickets.filter(col.filter);
+            return (
+              <div key={col.key} className="bg-slate-50/80 rounded-xl p-4 border border-slate-200 flex flex-col min-h-[480px]">
+                <div className={`border-t-2 ${col.color} pt-2 pb-3 mb-3 flex items-center justify-between`}>
+                  <h3 className="font-bold text-xs text-slate-800">{col.title}</h3>
+                  <span className="text-[11px] font-mono font-bold bg-white text-slate-600 px-2 py-0.5 rounded border border-slate-200">
+                    {colTickets.length}
+                  </span>
                 </div>
-              ))
-            )}
-          </div>
-          <div className="kanban-column flex-1 bg-gray-50 p-4 rounded min-h-[400px]">
-            <h3 className="font-bold border-b pb-2 mb-4">กำลังดำเนินการ</h3>
-            {filteredTickets.filter(t => t.status === 'IN_PROGRESS' || t.status === 'กำลังดำเนินการ').length === 0 ? (
-              <p className="text-center text-gray-500 mt-8">ยังไม่มีข้อมูลใบงาน</p>
-            ) : (
-              filteredTickets.filter(t => t.status === 'IN_PROGRESS' || t.status === 'กำลังดำเนินการ').map(ticket => (
-                <div key={ticket.ticket_id} className="bg-white p-3 rounded shadow mb-3 cursor-pointer" onClick={() => navigate('/tickets/' + ticket.ticket_id)}>
-                  <div className="font-bold">{ticket.ticket_id}</div>
-                  <div className="text-sm text-gray-600">{ticket.branch_name || ticket.branch_id}</div>
+
+                <div className="space-y-3 flex-1 overflow-y-auto">
+                  {colTickets.length > 0 ? (
+                    colTickets.map(t => (
+                      <div
+                        key={t.ticket_id}
+                        onClick={() => navigate(`/tickets/${t.ticket_id}`)}
+                        className="bg-white p-3.5 rounded-xl border border-slate-200 hover:border-blue-300 shadow-2xs hover:shadow-xs cursor-pointer transition-all space-y-2"
+                      >
+                        <div className="flex justify-between items-start">
+                          <span className="font-mono text-xs font-bold text-blue-600">
+                            {t.ticket_id}
+                          </span>
+                          {getPriorityBadge(t.priority)}
+                        </div>
+                        <p className="font-semibold text-xs text-slate-800">
+                          {t.branch_name || ('สาขา ' + t.branch_id)}
+                        </p>
+                        {t.overview && (
+                          <p className="text-[11px] text-slate-500 line-clamp-2">
+                            {t.overview}
+                          </p>
+                        )}
+                        <div className="pt-2 border-t border-slate-50 flex items-center justify-between text-[10px] text-slate-400">
+                          <span>{t.team_name || 'ยังไม่ระบุทีม'}</span>
+                          <span>{t.created_at ? new Date(t.created_at).toLocaleDateString('th-TH') : ''}</span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-lg">
+                      ไม่มีรายการ
+                    </div>
+                  )}
                 </div>
-              ))
-            )}
-          </div>
-          <div className="kanban-column flex-1 bg-gray-50 p-4 rounded min-h-[400px]">
-            <h3 className="font-bold border-b pb-2 mb-4">รอตรวจรับ</h3>
-            {filteredTickets.filter(t => t.status === 'RESOLVED' || t.status === 'รอตรวจรับ').length === 0 ? (
-              <p className="text-center text-gray-500 mt-8">ยังไม่มีข้อมูลใบงาน</p>
-            ) : (
-              filteredTickets.filter(t => t.status === 'RESOLVED' || t.status === 'รอตรวจรับ').map(ticket => (
-                <div key={ticket.ticket_id} className="bg-white p-3 rounded shadow mb-3 cursor-pointer" onClick={() => navigate('/tickets/' + ticket.ticket_id)}>
-                  <div className="font-bold">{ticket.ticket_id}</div>
-                  <div className="text-sm text-gray-600">{ticket.branch_name || ticket.branch_id}</div>
-                </div>
-              ))
-            )}
-          </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
   );
-};
-
-export default TicketList;
+}

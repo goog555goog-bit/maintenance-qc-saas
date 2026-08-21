@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, CheckCircle2, AlertCircle, RefreshCw, Inbox, Loader2 } from 'lucide-react';
+import { Bell, CheckCircle2, AlertCircle, RefreshCw, Loader2, Ticket, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { apiCall } from '@/core/api';
 
@@ -26,12 +26,15 @@ export default function Notifications() {
     fetchNotifications();
   }, []);
 
-  const handleMarkRead = async (id) => {
+  const handleMarkRead = async (id, ticketId) => {
     try {
       await apiCall('notification.markRead', { notification_id: id });
       setNotifications(prev => prev.map(n => 
         (n.notification_id === id || n.id === id) ? { ...n, is_read: true } : n
       ));
+      if (ticketId) {
+        navigate(`/tickets/${ticketId}`);
+      }
     } catch (err) {
       console.error('Failed to mark as read', err);
     }
@@ -68,62 +71,97 @@ export default function Notifications() {
   };
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-          <Bell className="h-6 w-6 text-blue-600" /> การแจ้งเตือน
-          {unreadCount > 0 && (
-            <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-              {unreadCount}
-            </span>
-          )}
-        </h1>
-        <button 
-          onClick={handleMarkAllRead}
-          disabled={unreadCount === 0 || isLoading}
-          className="text-sm font-medium text-blue-600 hover:text-blue-800 disabled:text-slate-400"
-        >
-          อ่านทั้งหมด
-        </button>
+    <div className="space-y-6 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+            <span>ศูนย์การแจ้งเตือน</span>
+            {unreadCount > 0 && (
+              <span className="bg-rose-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">
+                {unreadCount} ข้อความใหม่
+              </span>
+            )}
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">การแจ้งเตือนงานซ่อม การเปลี่ยนสถานะ และคำขออนุมัติ</p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={fetchNotifications}
+            className="p-2 border border-slate-200 bg-white rounded-xl hover:bg-slate-50 text-slate-600 transition-colors shadow-xs"
+            title="รีเฟรชการแจ้งเตือน"
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </button>
+          <button 
+            onClick={handleMarkAllRead}
+            disabled={unreadCount === 0 || isLoading}
+            className="text-xs font-semibold px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 disabled:opacity-40 transition-colors shadow-xs"
+          >
+            อ่านทั้งหมดแล้ว
+          </button>
+        </div>
       </div>
 
       {error && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6 border border-red-200">
-          {error}
+        <div className="bg-rose-50 text-rose-700 p-4 rounded-xl text-xs border border-rose-200 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{error}</span>
         </div>
       )}
 
-      <div className="space-y-3 min-h-[400px] flex flex-col">
+      {/* Notifications List */}
+      <div className="space-y-3">
         {isLoading && notifications.length === 0 ? (
-          <div className="flex justify-center items-center flex-1 py-16">
+          <div className="flex justify-center items-center py-24">
             <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
           </div>
         ) : notifications.length > 0 ? (
-          notifications.map(notification => (
-             <div 
-               key={notification.notification_id || notification.id} 
-               onClick={() => !notification.is_read && handleMarkRead(notification.notification_id || notification.id)}
-               className={`p-4 rounded-lg shadow-sm border flex gap-4 cursor-pointer transition-colors relative overflow-hidden ${
-                 !notification.is_read 
-                   ? 'bg-blue-50 border-blue-200 border-l-4 border-l-blue-500 hover:bg-blue-100' 
-                   : 'bg-white border-slate-200 hover:border-blue-300'
-               }`}
-             >
-               <div className="flex-1">
-                 <p className={`text-sm ${!notification.is_read ? 'font-semibold text-slate-800' : 'text-slate-600'}`}>
-                   {notification.message}
-                 </p>
-                 <p className="text-xs text-slate-400 mt-2">
-                   {formatDate(notification.created_at)}
-                 </p>
-               </div>
-             </div>
-          ))
+          notifications.map(n => {
+            const notifId = n.notification_id || n.id;
+            return (
+              <div 
+                key={notifId} 
+                onClick={() => handleMarkRead(notifId, n.ticket_id)}
+                className={`p-4 rounded-xl border flex items-start gap-3.5 cursor-pointer transition-all ${
+                  !n.is_read 
+                    ? 'bg-blue-50/50 border-blue-200 hover:bg-blue-50 shadow-xs' 
+                    : 'bg-white border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <div className={`p-2 rounded-lg shrink-0 ${!n.is_read ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                  <Bell className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className={`text-xs ${!n.is_read ? 'font-bold text-slate-900' : 'font-medium text-slate-700'}`}>
+                      {n.message}
+                    </p>
+                    {!n.is_read && (
+                      <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 mt-1.5 text-[11px] text-slate-400">
+                    {n.ticket_id && (
+                      <span className="font-mono font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100">
+                        {n.ticket_id}
+                      </span>
+                    )}
+                    <span>{formatDate(n.created_at)}</span>
+                  </div>
+                </div>
+                {n.ticket_id && (
+                  <ArrowRight className="w-4 h-4 text-slate-300 shrink-0 self-center" />
+                )}
+              </div>
+            );
+          })
         ) : (
-          <div className="flex flex-col items-center justify-center flex-1 py-16 text-slate-500 bg-white rounded-lg border border-slate-200 shadow-sm">
-            <Bell className="h-16 w-16 text-slate-200 mb-4" />
-            <p className="text-lg font-medium text-slate-600">ไม่มีการแจ้งเตือนใหม่</p>
-            <p className="text-sm text-slate-400 mt-1">คุณตรวจสอบการแจ้งเตือนครบหมดแล้ว</p>
+          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-slate-200 shadow-xs text-center p-6">
+            <CheckCircle2 className="h-10 w-10 text-emerald-500 mb-2" />
+            <p className="text-sm font-bold text-slate-800">ไม่มีการแจ้งเตือนใหม่</p>
+            <p className="text-xs text-slate-400 mt-0.5">คุณตรวจสอบและอ่านการแจ้งเตือนทั้งหมดเรียบร้อยแล้ว</p>
           </div>
         )}
       </div>

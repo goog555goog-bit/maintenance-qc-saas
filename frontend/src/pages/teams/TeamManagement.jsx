@@ -1,21 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Briefcase, History, Inbox, AlertCircle, Plus, Trash2 } from 'lucide-react';
+import { Users, Plus, Trash2, Shield, UserPlus, X, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { apiCall } from '@/core/api';
 
 export default function TeamManagement() {
   const [teams, setTeams] = useState([]);
-  const [allUsers, setAllUsers] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [teamDetail, setTeamDetail] = useState(null);
-  
+  const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
+  const [successMsg, setSuccessMsg] = useState('');
+
+  // Modals
   const [showModal, setShowModal] = useState(false);
-  const [showAddMember, setShowAddMember] = useState(false);
+  const [newTeamName, setNewTeamName] = useState('');
+  const [newTeamDesc, setNewTeamDesc] = useState('');
   
-  const [form, setForm] = useState({ team_name: '', description: '' });
-  const [selectedUserToAdd, setSelectedUserToAdd] = useState('');
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState('');
 
   const fetchData = async () => {
     setLoading(true);
@@ -25,8 +27,14 @@ export default function TeamManagement() {
         apiCall('team.list', {}),
         apiCall('user.list', {})
       ]);
-      setTeams(Array.isArray(teamsRes) ? teamsRes : (Array.isArray(teamsRes?.data) ? teamsRes.data : []));
-      setAllUsers(Array.isArray(usersRes) ? usersRes : (Array.isArray(usersRes?.data) ? usersRes.data : []));
+      const teamsList = Array.isArray(teamsRes) ? teamsRes : (Array.isArray(teamsRes?.data) ? teamsRes.data : []);
+      const usersList = Array.isArray(usersRes) ? usersRes : (Array.isArray(usersRes?.data) ? usersRes.data : []);
+      setTeams(teamsList);
+      setAllUsers(usersList);
+
+      if (teamsList.length > 0 && !selectedTeam) {
+        handleSelectTeam(teamsList[0]);
+      }
     } catch (err) {
       setError(err.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูล');
     } finally {
@@ -60,12 +68,16 @@ export default function TeamManagement() {
 
   const handleCreateTeam = async (e) => {
     e.preventDefault();
+    if (!newTeamName.trim()) return;
     setLoading(true);
     setError(null);
     try {
-      await apiCall('team.create', form);
+      await apiCall('team.create', { team_name: newTeamName.trim(), description: newTeamDesc.trim() });
       setShowModal(false);
-      setForm({ team_name: '', description: '' });
+      setNewTeamName('');
+      setNewTeamDesc('');
+      setSuccessMsg('สร้างทีมช่างใหม่สำเร็จ');
+      setTimeout(() => setSuccessMsg(''), 3000);
       fetchData();
     } catch (err) {
       setError(err.message || 'เกิดข้อผิดพลาดในการสร้างทีม');
@@ -76,14 +88,19 @@ export default function TeamManagement() {
 
   const handleAddMember = async (e) => {
     e.preventDefault();
-    if (!selectedUserToAdd || !selectedTeam) return;
-    
+    if (!selectedUserId || !selectedTeam) return;
     setLoading(true);
     setError(null);
     try {
-      await apiCall('team.addMember', { team_id: selectedTeam.team_id, user_id: selectedUserToAdd });
+      await apiCall('team.addMember', { 
+        team_id: selectedTeam.team_id, 
+        user_id: selectedUserId,
+        role: 'MEMBER'
+      });
       setShowAddMember(false);
-      setSelectedUserToAdd('');
+      setSelectedUserId('');
+      setSuccessMsg('เพิ่มสมาชิกเข้าทีมเรียบร้อยแล้ว');
+      setTimeout(() => setSuccessMsg(''), 3000);
       loadTeamDetail(selectedTeam.team_id);
     } catch (err) {
       setError(err.message || 'เกิดข้อผิดพลาดในการเพิ่มสมาชิก');
@@ -93,12 +110,13 @@ export default function TeamManagement() {
   };
 
   const handleRemoveMember = async (assignment_id) => {
-    if (!window.confirm('คุณต้องการนำสมาชิกออกจากทีมใช่หรือไม่?')) return;
-    
+    if (!confirm('คุณต้องการนำสมาชิกคนนี้ออกจากทีมใช่หรือไม่?')) return;
     setLoading(true);
     setError(null);
     try {
       await apiCall('team.removeMember', { assignment_id });
+      setSuccessMsg('นำสมาชิกออกจากทีมเรียบร้อยแล้ว');
+      setTimeout(() => setSuccessMsg(''), 3000);
       loadTeamDetail(selectedTeam.team_id);
     } catch (err) {
       setError(err.message || 'เกิดข้อผิดพลาดในการนำสมาชิกออก');
@@ -114,113 +132,156 @@ export default function TeamManagement() {
   });
 
   return (
-    <div className="p-6 relative">
-      {loading && (
-        <div className="fixed inset-0 bg-slate-900/20 z-40 flex items-center justify-center">
-          <div className="bg-white p-4 rounded-lg shadow-lg flex items-center gap-3">
-             <div className="animate-spin h-6 w-6 border-4 border-blue-600 border-t-transparent rounded-full"></div>
-             <span className="font-medium text-slate-700">กำลังโหลด...</span>
-          </div>
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">จัดการทีมช่างเทคนิค</h1>
+          <p className="text-xs text-slate-500 mt-0.5">บริหารจัดการทีมงาน กำหนดหัวหน้าทีม และจัดสรรกำลังพลช่างเทคนิค</p>
         </div>
-      )}
-
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">จัดการทีมช่างเทคนิค</h1>
         <button 
           onClick={() => setShowModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium shadow-sm transition-colors"
+          className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-1.5 transition-colors shadow-xs self-start sm:self-auto"
         >
-          เพิ่มทีมช่าง
+          <Plus className="w-4 h-4" />
+          <span>สร้างทีมช่างใหม่</span>
         </button>
       </div>
       
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
-          <AlertCircle className="h-5 w-5 shrink-0" />
-          <p className="text-sm font-medium">{error}</p>
+      {successMsg && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-emerald-800 text-xs">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <span>{successMsg}</span>
         </div>
       )}
 
+      {error && (
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-rose-800 text-xs">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1 border border-slate-200 bg-white rounded-lg shadow-sm overflow-hidden flex flex-col h-[600px]">
-          <div className="bg-slate-50 p-4 border-b border-slate-200 font-semibold text-slate-700">รายชื่อทีม</div>
+        {/* Left: Teams List */}
+        <div className="border border-slate-200 bg-white rounded-xl shadow-xs overflow-hidden flex flex-col h-[560px]">
+          <div className="bg-slate-50/70 p-4 border-b border-slate-200 text-xs font-bold text-slate-700 flex items-center justify-between">
+            <span>รายชื่อทีมช่างทั้งหมด</span>
+            <span className="text-[11px] font-mono font-semibold bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-600">
+              {teams.length} ทีม
+            </span>
+          </div>
+
           {teams.length === 0 && !loading ? (
-            <div className="flex flex-col items-center justify-center flex-1 p-8 text-center text-slate-500">
-              <Inbox className="h-12 w-12 text-slate-300 mb-3" />
-              <p className="text-sm font-medium">ยังไม่มีข้อมูลทีมช่าง</p>
+            <div className="flex flex-col items-center justify-center flex-1 p-8 text-center text-slate-400">
+              <Users className="h-10 w-10 text-slate-300 mb-2" />
+              <p className="text-xs font-medium text-slate-600">ยังไม่มีข้อมูลทีมช่าง</p>
+              <p className="text-[11px] text-slate-400 mt-1">กดปุ่ม 'สร้างทีมช่างใหม่' เพื่อเริ่มต้น</p>
             </div>
           ) : (
-            <ul className="divide-y divide-slate-100 overflow-y-auto">
-              {teams.map(team => (
-                <li 
-                  key={team.team_id} 
-                  className={`p-4 hover:bg-slate-50 cursor-pointer transition-colors ${selectedTeam?.team_id === team.team_id ? 'bg-blue-50 border-l-4 border-blue-500' : ''}`}
-                  onClick={() => handleSelectTeam(team)}
-                >
-                  <h3 className="font-semibold text-slate-800">{team.team_name}</h3>
-                  <p className="text-sm text-slate-500 mt-1">{team.description}</p>
-                </li>
-              ))}
+            <ul className="divide-y divide-slate-100 overflow-y-auto flex-1">
+              {teams.map(team => {
+                const isSelected = selectedTeam?.team_id === team.team_id;
+                return (
+                  <li 
+                    key={team.team_id} 
+                    className={`p-4 hover:bg-slate-50 cursor-pointer transition-colors ${
+                      isSelected ? 'bg-blue-50/70 border-l-4 border-blue-600' : ''
+                    }`}
+                    onClick={() => handleSelectTeam(team)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold text-xs text-slate-800">{team.team_name}</h3>
+                      <span className="font-mono text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.2 rounded">
+                        {team.team_id}
+                      </span>
+                    </div>
+                    {team.description && (
+                      <p className="text-[11px] text-slate-500 line-clamp-1 mt-1">{team.description}</p>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
         
-        <div className="lg:col-span-2 border border-slate-200 bg-white rounded-lg shadow-sm flex flex-col h-[600px]">
+        {/* Right: Team Details & Members */}
+        <div className="lg:col-span-2 border border-slate-200 bg-white rounded-xl shadow-xs flex flex-col h-[560px] overflow-hidden">
           {!teamDetail ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-slate-500 p-6 text-center">
-              <Users className="h-16 w-16 text-slate-200 mb-4" />
-              <p className="text-lg font-medium text-slate-600">ยังไม่ได้เลือกทีมช่าง</p>
-              <p className="text-sm text-slate-400 mt-2">โปรดเลือกทีมช่างจากรายการด้านซ้ายเพื่อดูรายละเอียด</p>
+            <div className="flex-1 flex flex-col items-center justify-center text-slate-400 p-6 text-center">
+              <Users className="h-12 w-12 text-slate-300 mb-3" />
+              <p className="text-sm font-bold text-slate-700">ยังไม่ได้เลือกทีมช่าง</p>
+              <p className="text-xs text-slate-400 mt-1">โปรดเลือกทีมช่างจากรายการด้านซ้ายเพื่อดูรายชื่อสมาชิก</p>
             </div>
           ) : (
             <div className="flex flex-col h-full">
-              <div className="p-6 border-b border-slate-200 flex justify-between items-start">
+              {/* Team Top Header */}
+              <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-800">{teamDetail.team_name}</h2>
-                  <p className="text-slate-500 mt-1">{teamDetail.description}</p>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base font-bold text-slate-800">{teamDetail.team_name}</h2>
+                    <span className="font-mono text-xs text-slate-400">({teamDetail.team_id})</span>
+                  </div>
+                  {teamDetail.description && (
+                    <p className="text-xs text-slate-500 mt-0.5">{teamDetail.description}</p>
+                  )}
                 </div>
                 <button 
                   onClick={() => setShowAddMember(true)}
-                  className="bg-white border border-slate-300 text-slate-700 px-3 py-1.5 rounded-md hover:bg-slate-50 text-sm font-medium flex items-center gap-2 shadow-sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors self-start sm:self-auto"
                 >
-                  <Plus className="h-4 w-4" /> เพิ่มสมาชิก
+                  <UserPlus className="h-3.5 w-3.5" />
+                  <span>เพิ่มสมาชิกเข้าทีม</span>
                 </button>
               </div>
               
+              {/* Member Table */}
               <div className="flex-1 overflow-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead className="sticky top-0 bg-slate-50 shadow-sm z-10">
-                    <tr className="border-b border-slate-200">
-                      <th className="p-4 text-sm font-semibold text-slate-600">รหัสพนักงาน</th>
-                      <th className="p-4 text-sm font-semibold text-slate-600">ชื่อ-นามสกุล</th>
-                      <th className="p-4 text-sm font-semibold text-slate-600">บทบาท</th>
-                      <th className="p-4 text-sm font-semibold text-slate-600 w-24">จัดการ</th>
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-400 uppercase">
+                    <tr>
+                      <th className="py-3 px-4">รหัสพนักงาน</th>
+                      <th className="py-3 px-4">ชื่อผู้ใช้งาน</th>
+                      <th className="py-3 px-4">บทบาท</th>
+                      <th className="py-3 px-4 text-right">การจัดการ</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {(!teamDetail.members || teamDetail.members.length === 0) ? (
-                      <tr>
-                        <td colSpan="4" className="p-8 text-center text-slate-500">
-                          ไม่มีสมาชิกในทีมนี้
-                        </td>
-                      </tr>
-                    ) : (
-                      teamDetail.members.map(member => (
-                        <tr key={member.assignment_id || member.user_id} className="border-b border-slate-100 hover:bg-slate-50">
-                          <td className="p-4 text-sm font-medium text-slate-700">{member.user_id}</td>
-                          <td className="p-4 text-sm text-slate-800">{member.name || member.full_name || 'ไม่ทราบชื่อ'}</td>
-                          <td className="p-4 text-sm text-slate-500">{member.role || 'ช่างเทคนิค'}</td>
-                          <td className="p-4">
+                  <tbody className="divide-y divide-slate-100">
+                    {teamDetail.members && teamDetail.members.length > 0 ? (
+                      teamDetail.members.map((member) => (
+                        <tr key={member.assignment_id || member.user_id} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="py-3 px-4 font-mono font-bold text-blue-600">
+                            {member.user_id}
+                          </td>
+                          <td className="py-3 px-4 font-medium text-slate-800">
+                            {member.username || member.user_id}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-slate-50 text-slate-600 border-slate-200">
+                              {member.role || 'ช่างเทคนิค'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right">
                             <button 
-                              onClick={() => handleRemoveMember(member.assignment_id)}
-                              className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 transition-colors"
-                              title="นำออก"
+                              onClick={() => handleRemoveMember(member.assignment_id)} 
+                              className="text-rose-600 hover:text-rose-800 p-1 rounded hover:bg-rose-50 transition-colors"
+                              title="นำออกจากทีม"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </td>
                         </tr>
                       ))
+                    ) : (
+                      <tr>
+                        <td colSpan="4" className="py-16 text-center text-slate-400">
+                          <Users className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+                          <p className="font-medium text-sm text-slate-600">ทีมนี้ยังไม่มีสมาชิก</p>
+                          <p className="text-xs text-slate-400 mt-1">กดปุ่ม 'เพิ่มสมาชิกเข้าทีม' ด้านบนเพื่อเพิ่มช่างเทคนิค</p>
+                        </td>
+                      </tr>
                     )}
                   </tbody>
                 </table>
@@ -230,49 +291,52 @@ export default function TeamManagement() {
         </div>
       </div>
 
+      {/* Modal: Create Team */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-slate-800">เพิ่มทีมช่าง</h2>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h2 className="text-sm font-bold text-slate-800">สร้างทีมช่างใหม่</h2>
+              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 p-1">
+                <X className="w-4 h-4" />
+              </button>
             </div>
-            <form onSubmit={handleCreateTeam} className="p-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">ชื่อทีม</label>
-                  <input 
-                    type="text"
-                    required
-                    value={form.team_name}
-                    onChange={(e) => setForm({...form, team_name: e.target.value})}
-                    className="w-full rounded-md border border-slate-300 p-2 text-sm focus:border-blue-500 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">รายละเอียด (ถ้ามี)</label>
-                  <textarea 
-                    rows="3"
-                    value={form.description}
-                    onChange={(e) => setForm({...form, description: e.target.value})}
-                    className="w-full rounded-md border border-slate-300 p-2 text-sm focus:border-blue-500 focus:ring-blue-500 outline-none"
-                  ></textarea>
-                </div>
+            <form onSubmit={handleCreateTeam} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">ชื่อทีมช่าง *</label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="เช่น ทีมช่างระบบปรับอากาศโซนตะวันออก"
+                  value={newTeamName}
+                  onChange={(e) => setNewTeamName(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                />
               </div>
-              <div className="mt-6 flex justify-end gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">รายละเอียดขอบเขตงาน</label>
+                <textarea 
+                  rows={3}
+                  placeholder="เช่น รับผิดชอบงานแอร์และระบบทำความเย็น โซน กทม. และปริมณฑล"
+                  value={newTeamDesc}
+                  onChange={(e) => setNewTeamDesc(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                 <button 
-                  type="button" 
+                  type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+                  className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
                 >
                   ยกเลิก
                 </button>
                 <button 
-                  type="submit" 
+                  type="submit"
                   disabled={loading}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors shadow-xs disabled:bg-blue-300"
                 >
-                  บันทึก
+                  {loading ? 'กำลังบันทึก...' : 'สร้างทีม'}
                 </button>
               </div>
             </form>
@@ -280,46 +344,47 @@ export default function TeamManagement() {
         </div>
       )}
 
+      {/* Modal: Add Member */}
       {showAddMember && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-slate-800">เพิ่มสมาชิกทีม</h2>
-              <button onClick={() => setShowAddMember(false)} className="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h2 className="text-sm font-bold text-slate-800">เพิ่มสมาชิกเข้าทีม: {selectedTeam?.team_name}</h2>
+              <button onClick={() => setShowAddMember(false)} className="text-slate-400 hover:text-slate-600 p-1">
+                <X className="w-4 h-4" />
+              </button>
             </div>
-            <form onSubmit={handleAddMember} className="p-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">เลือกพนักงาน</label>
-                  <select 
-                    required
-                    value={selectedUserToAdd}
-                    onChange={(e) => setSelectedUserToAdd(e.target.value)}
-                    className="w-full rounded-md border border-slate-300 p-2 text-sm focus:border-blue-500 focus:ring-blue-500 outline-none bg-white"
-                  >
-                    <option value="" disabled>-- เลือกพนักงาน --</option>
-                    {availableUsers.map(user => (
-                      <option key={user.user_id} value={user.user_id}>
-                        {user.user_id} - {user.name || user.full_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            <form onSubmit={handleAddMember} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">เลือกช่างเทคนิค *</label>
+                <select
+                  required
+                  value={selectedUserId}
+                  onChange={(e) => setSelectedUserId(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white font-medium"
+                >
+                  <option value="">-- เลือกช่างเทคนิค --</option>
+                  {availableUsers.map(u => (
+                    <option key={u.user_id} value={u.user_id}>
+                      {u.username || u.user_id} ({u.user_id}) - {u.role}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div className="mt-6 flex justify-end gap-3">
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                 <button 
-                  type="button" 
+                  type="button"
                   onClick={() => setShowAddMember(false)}
-                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+                  className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
                 >
                   ยกเลิก
                 </button>
                 <button 
-                  type="submit" 
-                  disabled={loading || !selectedUserToAdd}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed"
+                  type="submit"
+                  disabled={loading || !selectedUserId}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors shadow-xs disabled:bg-blue-300"
                 >
-                  เพิ่มเข้าทีม
+                  {loading ? 'กำลังเพิ่ม...' : 'เพิ่มเข้าทีม'}
                 </button>
               </div>
             </form>
