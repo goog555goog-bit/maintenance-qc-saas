@@ -20,6 +20,8 @@ const Router = {
       }
     }
 
+    const db = Database.getInstance();
+
     switch (action) {
       case 'system.ping':
         return { status: 'OK', message: 'System is online', timestamp: new Date().toISOString() };
@@ -34,7 +36,8 @@ const Router = {
         return Auth.resetPassword(payload);
       case 'auth.updateProfile':
         return Auth.updateProfile(payload, userContext);
-        
+
+      // ---- Tickets ----
       case 'ticket.create':
         return TicketService.createTicket(payload, userContext);
       case 'ticket.list':
@@ -54,47 +57,204 @@ const Router = {
       case 'ticket.close':
         return TicketService.closeTicket(payload, userContext);
 
-      // Branch master data
+      // ---- Branches ----
       case 'branch.list':
-        return Database.getInstance().query('Branches', { status: 'ACTIVE' });
+        return db.query('Branches');
       case 'branch.get':
-        return Database.getInstance().query('Branches', { branch_id: payload.branch_id })[0] || null;
+        return db.query('Branches', { branch_id: payload.branch_id })[0] || null;
+      case 'branch.create': {
+        Validation.requireFields(payload, ['branch_name']);
+        const branchId = 'BR-' + Utilities.getUuid().slice(0, 8).toUpperCase();
+        const row = {
+          branch_id: branchId,
+          branch_name: Security.sanitizeString(payload.branch_name),
+          location_lat: payload.location_lat || '',
+          location_lng: payload.location_lng || '',
+          address: Security.sanitizeString(payload.address || ''),
+          status: 'ACTIVE',
+          created_at: new Date().toISOString(),
+          created_by: userContext.user_id
+        };
+        db.insert('Branches', row);
+        AuditService.logActivity(userContext.user_id, 'ADMIN', 'CREATE_BRANCH', 'Branches', branchId, null, row, 'เพิ่มสาขาใหม่: ' + row.branch_name);
+        return row;
+      }
+      case 'branch.update': {
+        Validation.requireFields(payload, ['branch_id']);
+        const updates = {};
+        if (payload.branch_name) updates.branch_name = Security.sanitizeString(payload.branch_name);
+        if (payload.address !== undefined) updates.address = Security.sanitizeString(payload.address);
+        if (payload.location_lat !== undefined) updates.location_lat = payload.location_lat;
+        if (payload.location_lng !== undefined) updates.location_lng = payload.location_lng;
+        if (payload.status !== undefined) updates.status = payload.status;
+        db.update('Branches', 'branch_id', payload.branch_id, updates);
+        AuditService.logActivity(userContext.user_id, 'ADMIN', 'UPDATE_BRANCH', 'Branches', payload.branch_id, null, updates, 'อัปเดตข้อมูลสาขา');
+        return { success: true };
+      }
 
-      // Team master data
+      // ---- Teams ----
       case 'team.list':
-        return Database.getInstance().query('Teams', { status: 'ACTIVE' });
-      case 'team.get':
-        return Database.getInstance().query('Teams', { team_id: payload.team_id })[0] || null;
-
-      // User / Technician list
-      case 'user.list':
-        return Database.getInstance().query('Users', { active: 'TRUE' }).map(function(u) {
-          return { user_id: u.user_id, username: u.username, role: u.role, email: u.email };
+        return db.query('Teams');
+      case 'team.get': {
+        const team = db.query('Teams', { team_id: payload.team_id })[0] || null;
+        if (!team) return null;
+        // Get current members
+        const members = db.query('User_Assignment_History', { team_id: payload.team_id, effective_to: '' })
+          .map(function(a) {
+            const u = db.query('Users', { user_id: a.user_id })[0] || {};
+            return { user_id: a.user_id, username: u.username || a.user_id, role: u.role || '', assignment_id: a.assignment_id };
+          });
+        return Object.assign({}, team, { members: members });
+      }
+      case 'team.create': {
+        Validation.requireFields(payload, ['team_name']);
+        const teamId = 'TM-' + Utilities.getUuid().slice(0, 8).toUpperCase();
+        const row = {
+          team_id: teamId,
+          team_name: Security.sanitizeString(payload.team_name),
+          description: Security.sanitizeString(payload.description || ''),
+          status: 'ACTIVE',
+          created_at: new Date().toISOString(),
+          created_by: userContext.user_id
+        };
+        db.insert('Teams', row);
+        AuditService.logActivity(userContext.user_id, 'ADMIN', 'CREATE_TEAM', 'Teams', teamId, null, row, 'เพิ่มทีมช่างใหม่: ' + row.team_name);
+        return row;
+      }
+      case 'team.update': {
+        Validation.requireFields(payload, ['team_id']);
+        const updates = {};
+        if (payload.team_name) updates.team_name = Security.sanitizeString(payload.team_name);
+        if (payload.description !== undefined) updates.description = Security.sanitizeString(payload.description);
+        if (payload.status !== undefined) updates.status = payload.status;
+        db.update('Teams', 'team_id', payload.team_id, updates);
+        return { success: true };
+      }
+      case 'team.addMember': {
+        Validation.requireFields(payload, ['team_id', 'user_id']);
+        const assignId = 'UAH-' + Utilities.getUuid().slice(0, 8).toUpperCase();
+        db.insert('User_Assignment_History', {
+          assignment_id: assignId,
+          user_id: payload.user_id,
+          role: 'TECHNICIAN',
+          branch_id: '',
+          team_id: payload.team_id,
+          effective_from: new Date().toISOString(),
+          effective_to: '',
+          assigned_by: userContext.user_id,
+          reason: 'เพิ่มสมาชิกทีม'
         });
+        return { success: true };
+      }
+      case 'team.removeMember': {
+        Validation.requireFields(payload, ['assignment_id']);
+        db.update('User_Assignment_History', 'assignment_id', payload.assignment_id, {
+          effective_to: new Date().toISOString()
+        });
+        return { success: true };
+      }
+
+      // ---- Users ----
+      case 'user.list':
+        return db.query('Users', { active: 'TRUE' }).map(function(u) {
+          return { user_id: u.user_id, username: u.username, role: u.role, email: u.email || '' };
+        });
+      case 'user.create': {
+        Validation.requireFields(payload, ['user_id', 'role']);
+        const existing = db.query('Users', { user_id: payload.user_id });
+        if (existing.length > 0) throw new Error('รหัสพนักงานนี้มีอยู่แล้วในระบบ');
+        const salt = Security.generateSalt();
+        const initialPass = String(payload.user_id).trim();
+        const row = {
+          user_id: payload.user_id,
+          username: Security.sanitizeString(payload.username || payload.user_id),
+          email: payload.email || '',
+          password_hash: Security.hashPassword(initialPass, salt),
+          salt: salt,
+          role: payload.role,
+          active: 'TRUE'
+        };
+        db.insert('Users', row);
+        AuditService.logActivity(userContext.user_id, 'ADMIN', 'CREATE_USER', 'Users', payload.user_id, null, { role: payload.role }, 'เพิ่มผู้ใช้งานใหม่');
+        return { user_id: row.user_id, username: row.username, role: row.role };
+      }
+      case 'user.update': {
+        Validation.requireFields(payload, ['user_id']);
+        const updates = {};
+        if (payload.username) updates.username = Security.sanitizeString(payload.username);
+        if (payload.role) updates.role = payload.role;
+        if (payload.active !== undefined) updates.active = String(payload.active);
+        db.update('Users', 'user_id', payload.user_id, updates);
+        return { success: true };
+      }
       case 'user.history':
         return RBAC.getUserHistory(payload, userContext);
 
-      // Work type / Category master data
+      // ---- Work Types ----
       case 'work_type.list':
-        return Database.getInstance().query('Work_Types', { status: 'ACTIVE' });
+        return db.query('Work_Types');
+      case 'work_type.create': {
+        Validation.requireFields(payload, ['work_type_name']);
+        const wtId = 'WT-' + Utilities.getUuid().slice(0, 8).toUpperCase();
+        const row = {
+          work_type_id: wtId,
+          work_type_name: Security.sanitizeString(payload.work_type_name),
+          description: Security.sanitizeString(payload.description || ''),
+          status: 'ACTIVE',
+          created_at: new Date().toISOString()
+        };
+        db.insert('Work_Types', row);
+        return row;
+      }
+      case 'work_type.update': {
+        Validation.requireFields(payload, ['work_type_id']);
+        const updates = {};
+        if (payload.work_type_name) updates.work_type_name = Security.sanitizeString(payload.work_type_name);
+        if (payload.status !== undefined) updates.status = payload.status;
+        db.update('Work_Types', 'work_type_id', payload.work_type_id, updates);
+        return { success: true };
+      }
 
-      // Fuel
+      // ---- Fuel ----
       case 'fuel.adjust':
         return FuelService.adjustFuelAmount(payload, userContext);
       case 'fuel_rate.get':
-        return Database.getInstance().query('Fuel_Rates').slice(-1)[0] || null;
+        return db.query('Fuel_Rates').slice(-1)[0] || null;
       case 'fuel_rate.list':
-        return Database.getInstance().query('Fuel_Rates');
+        return db.query('Fuel_Rates');
       case 'fuel_rate.set':
         return FuelService.setFuelRate(payload, userContext);
+      case 'fuel_review.list':
+        return db.query('Fuel_Adjustments').filter(function(r) { return r.status === 'PENDING'; });
+      case 'fuel_review.approve': {
+        Validation.requireFields(payload, ['adjustment_id']);
+        db.update('Fuel_Adjustments', 'adjustment_id', payload.adjustment_id, {
+          status: 'APPROVED',
+          reviewed_by: userContext.user_id,
+          reviewed_at: new Date().toISOString()
+        });
+        AuditService.logActivity(userContext.user_id, 'MANAGER', 'APPROVE_FUEL', 'Fuel_Adjustments', payload.adjustment_id, 'PENDING', 'APPROVED', 'อนุมัติการขอปรับค่าน้ำมัน');
+        return { success: true };
+      }
+      case 'fuel_review.reject': {
+        Validation.requireFields(payload, ['adjustment_id', 'reason']);
+        db.update('Fuel_Adjustments', 'adjustment_id', payload.adjustment_id, {
+          status: 'REJECTED',
+          reject_reason: Security.sanitizeString(payload.reason),
+          reviewed_by: userContext.user_id,
+          reviewed_at: new Date().toISOString()
+        });
+        AuditService.logActivity(userContext.user_id, 'MANAGER', 'REJECT_FUEL', 'Fuel_Adjustments', payload.adjustment_id, 'PENDING', 'REJECTED', 'ปฏิเสธการขอปรับค่าน้ำมัน');
+        return { success: true };
+      }
 
-      // Notifications
+      // ---- Notifications ----
       case 'notification.list':
         return NotificationService.listNotifications(payload, userContext);
       case 'notification.markRead':
         return NotificationService.markRead(payload, userContext);
 
-      // Reports / Archive
+      // ---- Reports / Archive ----
       case 'report.summary':
         return TicketService.getReportSummary(payload, userContext);
       case 'archive.list':
@@ -105,4 +265,3 @@ const Router = {
     }
   }
 };
-
