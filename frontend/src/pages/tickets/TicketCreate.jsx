@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Camera, AlertCircle, CheckCircle2, Loader2, Tag } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Camera, AlertCircle, Loader2, Tag, Edit3 } from 'lucide-react';
 import { apiCall } from '@/core/api';
 
 export default function TicketCreate() {
@@ -13,12 +13,14 @@ export default function TicketCreate() {
   const [priority, setPriority] = useState('NORMAL');
   const [overview, setOverview] = useState('');
 
-  // Location items (แต่ละจุดซ่อม มีหมวดหมู่งานหลัก และประเภทย่อยที่เลือกได้มากกว่า 1 อัน)
+  // Location items (แต่ละจุดซ่อม มีหมวดหมู่งานหลัก, ประเภทย่อยที่เลือกได้หลายอัน, และตัวเลือก อื่นๆ (*ระบุ))
   const [locations, setLocations] = useState([
     { 
       id: Date.now(), 
       work_type_id: '', 
       selected_sub_items: [], 
+      is_other_selected: false,
+      other_text: '',
       detail: '', 
       image_name: null 
     }
@@ -50,6 +52,8 @@ export default function TicketCreate() {
         id: Date.now(), 
         work_type_id: categories.length > 0 ? categories[0].work_type_id : '', 
         selected_sub_items: [], 
+        is_other_selected: false,
+        other_text: '',
         detail: '', 
         image_name: null 
       }
@@ -65,13 +69,19 @@ export default function TicketCreate() {
   const updateLocationWorkType = (id, work_type_id) => {
     setLocations(locations.map(loc => {
       if (loc.id === id) {
-        return { ...loc, work_type_id, selected_sub_items: [] }; // Reset sub-items when main category changes
+        return { 
+          ...loc, 
+          work_type_id, 
+          selected_sub_items: [],
+          is_other_selected: false,
+          other_text: ''
+        };
       }
       return loc;
     }));
   };
 
-  // Toggle sub-item multi-selection
+  // Toggle standard sub-item multi-selection
   const toggleSubItem = (locId, subItemName) => {
     setLocations(locations.map(loc => {
       if (loc.id === locId) {
@@ -81,6 +91,30 @@ export default function TicketCreate() {
           ? current.filter(item => item !== subItemName)
           : [...current, subItemName];
         return { ...loc, selected_sub_items: updated };
+      }
+      return loc;
+    }));
+  };
+
+  // Toggle "อื่นๆ (*ระบุ)" option
+  const toggleOtherOption = (locId) => {
+    setLocations(locations.map(loc => {
+      if (loc.id === locId) {
+        const nextState = !loc.is_other_selected;
+        return { 
+          ...loc, 
+          is_other_selected: nextState,
+          other_text: nextState ? loc.other_text : ''
+        };
+      }
+      return loc;
+    }));
+  };
+
+  const updateOtherText = (locId, text) => {
+    setLocations(locations.map(loc => {
+      if (loc.id === locId) {
+        return { ...loc, other_text: text };
       }
       return loc;
     }));
@@ -112,8 +146,17 @@ export default function TicketCreate() {
       if (!loc.work_type_id && categories.length > 0) {
         return setErrorMsg(`กรุณาเลือกหมวดหมู่งานหลักสำหรับจุดซ่อมที่ ${i + 1}`);
       }
-      if (loc.selected_sub_items.length === 0 && !loc.detail.trim()) {
-        return setErrorMsg(`กรุณาเลือกประเภทย่อยหรือระบุรายละเอียดสำหรับจุดซ่อมที่ ${i + 1}`);
+      
+      const hasStandardSubItems = loc.selected_sub_items && loc.selected_sub_items.length > 0;
+      const hasOtherSpecified = loc.is_other_selected && loc.other_text.trim() !== '';
+      const hasDetail = loc.detail && loc.detail.trim() !== '';
+
+      if (loc.is_other_selected && !loc.other_text.trim()) {
+        return setErrorMsg(`กรุณากรอกข้อความระบุในช่อง "อื่นๆ (*ระบุเพิ่มเติม)" สำหรับจุดซ่อมที่ ${i + 1}`);
+      }
+
+      if (!hasStandardSubItems && !hasOtherSpecified && !hasDetail) {
+        return setErrorMsg(`กรุณาเลือกประเภทย่อย หรือระบุอาการในช่องอื่นๆ/รายละเอียด สำหรับจุดซ่อมที่ ${i + 1}`);
       }
     }
 
@@ -121,16 +164,23 @@ export default function TicketCreate() {
 
     try {
       // Build items payload
-      const formattedItems = locations.map((loc, idx) => {
+      const formattedItems = locations.map((loc) => {
         const mainCat = categories.find(c => c.work_type_id === loc.work_type_id);
         const mainCatName = mainCat ? mainCat.work_type_name : '';
-        const subItemsStr = loc.selected_sub_items.length > 0 ? `[${loc.selected_sub_items.join(', ')}] ` : '';
-        const fullDetail = `${subItemsStr}${loc.detail}`.trim();
+        
+        // Combine standard sub-items with custom "อื่นๆ: ..."
+        const combinedSubItems = [...(loc.selected_sub_items || [])];
+        if (loc.is_other_selected && loc.other_text.trim()) {
+          combinedSubItems.push(`อื่นๆ (${loc.other_text.trim()})`);
+        }
+
+        const subItemsStr = combinedSubItems.length > 0 ? `[${combinedSubItems.join(', ')}] ` : '';
+        const fullDetail = `${subItemsStr}${loc.detail || ''}`.trim();
 
         return {
           work_type_id: loc.work_type_id,
           category_name: mainCatName,
-          sub_items: loc.selected_sub_items,
+          sub_items: combinedSubItems,
           detail: fullDetail,
           image_url: loc.image_name
         };
@@ -234,7 +284,7 @@ export default function TicketCreate() {
           <div className="flex justify-between items-center border-b border-slate-100 pb-3">
             <div>
               <h2 className="text-base font-bold text-slate-800">รายการจุดซ่อม</h2>
-              <p className="text-xs text-slate-500 mt-0.5">ในแต่ละจุดซ่อมสามารถเลือกหมวดหมู่หลัก และประเภทย่อยได้หลายรายการ</p>
+              <p className="text-xs text-slate-500 mt-0.5">ในแต่ละจุดซ่อมสามารถเลือกหมวดหมู่หลัก และประเภทย่อยได้หลายรายการพร้อมตัวเลือกอื่นๆ (*ระบุ)</p>
             </div>
             <button 
               type="button"
@@ -246,13 +296,13 @@ export default function TicketCreate() {
             </button>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-5">
             {locations.map((loc, index) => {
               const selectedCat = categories.find(c => c.work_type_id === loc.work_type_id);
               const subItemsList = selectedCat?.items || [];
 
               return (
-                <div key={loc.id} className="p-4 border border-slate-200 rounded-xl bg-slate-50/60 space-y-3 relative">
+                <div key={loc.id} className="p-4 border border-slate-200 rounded-xl bg-slate-50/60 space-y-3.5 relative">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-xs text-slate-700 bg-white px-2.5 py-1 rounded-md border border-slate-200">
                       จุดซ่อมที่ {index + 1}
@@ -286,35 +336,64 @@ export default function TicketCreate() {
                     </select>
                   </div>
 
-                  {/* 2. Sub-categories Multi-Select */}
+                  {/* 2. Sub-categories Multi-Select + อื่นๆ (*ระบุ) */}
                   {selectedCat && (
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    <div className="space-y-2">
+                      <label className="block text-xs font-semibold text-slate-700">
                         ประเภทย่อย / ปัญหาที่พบ (เลือกได้มากกว่า 1 รายการ):
                       </label>
-                      {subItemsList.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                          {subItemsList.map(subItem => {
-                            const isSelected = loc.selected_sub_items.includes(subItem.item_name);
-                            return (
-                              <button
-                                key={subItem.work_type_item_id || subItem.item_name}
-                                type="button"
-                                onClick={() => toggleSubItem(loc.id, subItem.item_name)}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all flex items-center gap-1.5 ${
-                                  isSelected 
-                                    ? 'bg-blue-600 text-white border-blue-600 shadow-xs' 
-                                    : 'bg-white text-slate-700 border-slate-300 hover:border-slate-400'
-                                }`}
-                              >
-                                <span>{subItem.item_name}</span>
-                                {isSelected && <span className="font-bold text-[11px]">✓</span>}
-                              </button>
-                            );
-                          })}
+                      <div className="flex flex-wrap gap-2">
+                        {/* Standard Sub-items */}
+                        {subItemsList.map(subItem => {
+                          const isSelected = loc.selected_sub_items.includes(subItem.item_name);
+                          return (
+                            <button
+                              key={subItem.work_type_item_id || subItem.item_name}
+                              type="button"
+                              onClick={() => toggleSubItem(loc.id, subItem.item_name)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all flex items-center gap-1.5 ${
+                                isSelected 
+                                  ? 'bg-blue-600 text-white border-blue-600 shadow-xs' 
+                                  : 'bg-white text-slate-700 border-slate-300 hover:border-slate-400'
+                              }`}
+                            >
+                              <span>{subItem.item_name}</span>
+                              {isSelected && <span className="font-bold text-[11px]">✓</span>}
+                            </button>
+                          );
+                        })}
+
+                        {/* Special "อื่นๆ (*ระบุ)" Option */}
+                        <button
+                          type="button"
+                          onClick={() => toggleOtherOption(loc.id)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all flex items-center gap-1.5 ${
+                            loc.is_other_selected 
+                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs' 
+                              : 'bg-white text-indigo-700 border-indigo-200 hover:border-indigo-400'
+                          }`}
+                        >
+                          <Edit3 className="w-3 h-3" />
+                          <span>อื่นๆ (*ระบุเพิ่มเติม)</span>
+                          {loc.is_other_selected && <span className="font-bold text-[11px]">✓</span>}
+                        </button>
+                      </div>
+
+                      {/* Input for "อื่นๆ (*ระบุเพิ่มเติม)" */}
+                      {loc.is_other_selected && (
+                        <div className="p-3 bg-indigo-50/70 border border-indigo-200 rounded-lg mt-2">
+                          <label className="block text-xs font-semibold text-indigo-900 mb-1">
+                            ระบุอาการหรือปัญหาอื่นๆ ที่พบในจุดนี้ *
+                          </label>
+                          <input 
+                            type="text" 
+                            required
+                            placeholder="เช่น มีเสียงดังผิดปกติที่มอเตอร์, มีกลิ่นไหม้, น้ำหยดจากท่อน้ำทิ้ง..."
+                            value={loc.other_text}
+                            onChange={(e) => updateOtherText(loc.id, e.target.value)}
+                            className="w-full border border-indigo-300 rounded-md p-2 text-xs focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 outline-none bg-white"
+                          />
                         </div>
-                      ) : (
-                        <p className="text-xs text-slate-400 italic">หมวดหมู่นี้ยังไม่มีประเภทย่อย (สามารถพิมพ์ระบุในช่องรายละเอียดด้านล่าง)</p>
                       )}
                     </div>
                   )}
