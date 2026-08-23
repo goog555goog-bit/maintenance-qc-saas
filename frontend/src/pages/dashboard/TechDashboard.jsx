@@ -12,6 +12,7 @@ import {
   Navigation
 } from 'lucide-react';
 import { apiCall } from '@/core/api';
+import StatusBadge from '@/components/ui/StatusBadge';
 
 export default function TechDashboard() {
   const [metrics, setMetrics] = useState({
@@ -150,13 +151,7 @@ export default function TechDashboard() {
                     <span className="font-semibold text-sm text-slate-800">
                       {t.branch_name || ('สาขา ' + t.branch_id)}
                     </span>
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                      t.status === 'REJECTED_REWORK' ? 'bg-rose-50 text-rose-700 border-rose-200' :
-                      t.status === 'IN_PROGRESS' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                      'bg-purple-50 text-purple-700 border-purple-200'
-                    }`}>
-                      {t.status}
-                    </span>
+                    <StatusBadge status={t.status} size="xs" />
                   </div>
                   {t.overview && (
                     <p className="text-xs text-slate-600 line-clamp-1">

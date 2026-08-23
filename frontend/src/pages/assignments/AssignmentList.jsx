@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserPlus, Clock, CheckCircle2, AlertCircle, Users } from 'lucide-react';
 import { apiCall } from '../../core/api';
+import StatusBadge from '../../components/ui/StatusBadge';
 
 export default function AssignmentList() {
   const [waitingAssignments, setWaitingAssignments] = useState([]);
@@ -192,9 +193,7 @@ export default function AssignmentList() {
                           {assignment.branch_name || ('สาขา ' + assignment.branch_id)}
                         </p>
                       </div>
-                      <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                        {assignment.status}
-                      </span>
+                      <StatusBadge status={assignment.status} size="xs" />
                     </div>
                     {assignment.team_name && (
                       <p className="text-xs text-slate-500 flex items-center gap-1">

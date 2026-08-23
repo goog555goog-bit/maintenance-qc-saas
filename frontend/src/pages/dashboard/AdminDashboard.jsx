@@ -14,6 +14,7 @@ import {
   Ticket
 } from 'lucide-react';
 import { apiCall } from '@/core/api';
+import StatusBadge from '@/components/ui/StatusBadge';
 
 export default function AdminDashboard() {
   const [metrics, setMetrics] = useState({
@@ -206,9 +207,7 @@ export default function AdminDashboard() {
                         {t.branch_name || ('สาขา ' + t.branch_id)}
                       </td>
                       <td className="py-3 px-3">
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-slate-100 text-slate-700 border-slate-200">
-                          {t.status}
-                        </span>
+                        <StatusBadge status={t.status} size="xs" />
                       </td>
                       <td className="py-3 px-3 text-slate-500">
                         {t.team_name || t.team || '-'}

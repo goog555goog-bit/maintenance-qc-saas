@@ -196,13 +196,27 @@ export default function TicketDetail({ role: propRole }) {
   }
 
   const statusMap = {
-    NEW: { label: 'แจ้งใหม่ / รอจัดสรร', color: 'bg-blue-50 text-blue-700 border-blue-200' },
-    SUBMITTED: { label: 'แจ้งใหม่ / รอจัดสรร', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+    NEW: { label: 'แจ้งใหม่ (รอจัดสรรทีมช่าง)', color: 'bg-sky-50 text-sky-700 border-sky-200' },
+    SUBMITTED: { label: 'แจ้งใหม่ (รอจัดสรรทีมช่าง)', color: 'bg-sky-50 text-sky-700 border-sky-200' },
+    WAITING_ASSIGNMENT: { label: 'รอจัดสรรทีมช่าง', color: 'bg-amber-50 text-amber-700 border-amber-200' },
     ASSIGNED: { label: 'มอบหมายทีมช่างแล้ว', color: 'bg-purple-50 text-purple-700 border-purple-200' },
-    IN_PROGRESS: { label: 'กำลังปฏิบัติงาน', color: 'bg-amber-50 text-amber-700 border-amber-200' },
-    COMPLETED_BY_TECH: { label: 'ช่างส่งงาน / รอตรวจรับ', color: 'bg-teal-50 text-teal-700 border-teal-200' },
-    REJECTED_REWORK: { label: 'ส่งกลับแก้ไข (Rework)', color: 'bg-red-50 text-red-700 border-red-200' },
-    CLOSED: { label: 'ปิดงานสมบูรณ์', color: 'bg-green-50 text-green-700 border-green-200' }
+    CHECKED_IN: { label: 'ช่างถึงพื้นที่แล้ว', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+    IN_PROGRESS: { label: 'กำลังดำเนินการซ่อม', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+    COMPLETED_BY_TECH: { label: 'ช่างส่งมอบงานแล้ว (รอตรวจรับ)', color: 'bg-teal-50 text-teal-700 border-teal-200' },
+    WAITING_REVIEW: { label: 'รอผู้จัดการตรวจรับงาน', color: 'bg-teal-50 text-teal-700 border-teal-200' },
+    REWORK: { label: 'ส่งกลับแก้ไข (Rework)', color: 'bg-rose-50 text-rose-700 border-rose-200' },
+    REJECTED_REWORK: { label: 'ส่งกลับแก้ไข (Rework)', color: 'bg-rose-50 text-rose-700 border-rose-200' },
+    COMPLETED: { label: 'ตรวจรับผ่านเรียบร้อย', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    CLOSED: { label: 'ปิดงานสมบูรณ์', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    ARCHIVED: { label: 'เก็บเข้าคลังประวัติ', color: 'bg-slate-100 text-slate-700 border-slate-200' },
+    CANCELLED: { label: 'ยกเลิกใบงาน', color: 'bg-slate-100 text-slate-600 border-slate-200' }
+  };
+
+  const priorityMap = {
+    URGENT: { label: 'ฉุกเฉินที่สุด', color: 'text-rose-600 font-bold' },
+    HIGH: { label: 'เร่งด่วน', color: 'text-amber-600 font-bold' },
+    NORMAL: { label: 'ปกติ', color: 'text-slate-700 font-semibold' },
+    LOW: { label: 'ไม่เร่งด่วน', color: 'text-slate-500 font-medium' }
   };
 
   const currentStatus = ticket ? (statusMap[ticket.status] || { label: ticket.status, color: 'bg-slate-100 text-slate-700 border-slate-200' }) : null;
@@ -307,7 +321,9 @@ export default function TicketDetail({ role: propRole }) {
                 </div>
                 <div>
                   <label className="text-xs text-slate-400 font-medium">ระดับความเร่งด่วน</label>
-                  <p className="text-sm font-semibold text-amber-600">{ticket?.priority || 'NORMAL'}</p>
+                  <p className={`text-sm ${priorityMap[ticket?.priority]?.color || 'text-slate-700 font-semibold'}`}>
+                    {priorityMap[ticket?.priority]?.label || ticket?.priority || 'ปกติ'}
+                  </p>
                 </div>
                 <div>
                   <label className="text-xs text-slate-400 font-medium">รายละเอียดภาพรวม</label>
