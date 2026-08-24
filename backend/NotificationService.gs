@@ -2,13 +2,37 @@
  * Notification Service
  */
 const NotificationService = {
-  notify: function(ticketId, eventStr, targetUserId) {
+  getEventThaiLabel: function(eventStr) {
+    const map = {
+      'SUBMITTED': 'แจ้งซ่อมใหม่ (รอจัดสรรทีมช่าง)',
+      'NEW': 'แจ้งซ่อมใหม่ (รอจัดสรรทีมช่าง)',
+      'WAITING_ASSIGNMENT': 'รอจัดสรรทีมช่างเข้าปฏิบัติงาน',
+      'ASSIGNED': 'มอบหมายทีมช่างผู้รับผิดชอบเรียบร้อยแล้ว',
+      'CHECKED_IN': 'ช่างเทคนิคเดินทางถึงพื้นที่สาขาแล้ว (Check-in)',
+      'IN_PROGRESS': 'ช่างเทคนิคกำลังดำเนินการซ่อมบำรุง',
+      'COMPLETED_BY_TECH': 'ช่างส่งมอบงานแล้ว (รอผู้จัดการตรวจรับงาน)',
+      'WAITING_REVIEW': 'รอผู้จัดการตรวจรับและอนุมัติปิดงาน',
+      'REWORK': 'งานถูกส่งกลับแก้ไข (Rework) กรุณาตรวจสอบ',
+      'REJECTED_REWORK': 'งานถูกส่งกลับแก้ไข (Rework) กรุณาตรวจสอบ',
+      'COMPLETED': 'ตรวจรับงานผ่านเรียบร้อยแล้ว',
+      'CLOSED': 'ปิดงานซ่อมบำรุงสมบูรณ์',
+      'FUEL_SUBMITTED': 'มีคำขอเบิกค่าน้ำมันใหม่ (รอตรวจสอบ)',
+      'FUEL_APPROVED': 'คำขอเบิกค่าน้ำมันได้รับการอนุมัติแล้ว',
+      'FUEL_REJECTED': 'คำขอเบิกค่าน้ำมันถูกปฏิเสธ'
+    };
+    return map[eventStr] || eventStr;
+  },
+
+  notify: function(ticketId, eventStr, targetUserId, extraDetail) {
     const db = Database.getInstance();
-    const message = "ใบงาน " + ticketId + ": " + eventStr;
+    const eventThai = this.getEventThaiLabel(eventStr);
+    const message = "ใบงาน " + ticketId + ": " + eventThai + (extraDetail ? " - " + extraDetail : "");
     const notifId = 'NOTIF-' + Utilities.getUuid().slice(0, 8).toUpperCase();
     
     db.insert('Notifications', {
       notification_id: notifId,
+      ticket_id: ticketId,
+      status: eventStr,
       user_id: targetUserId || 'SYSTEM_BROADCAST',
       message: message,
       is_read: 'FALSE',
@@ -37,6 +61,8 @@ const NotificationService = {
       const isRead = n.is_read === 'TRUE' || n.read === 'TRUE';
       return {
         notification_id: n.notification_id,
+        ticket_id: n.ticket_id || '',
+        status: n.status || '',
         user_id: n.user_id,
         message: n.message,
         is_read: isRead,
