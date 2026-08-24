@@ -36,6 +36,23 @@ const STATUS_THAI_MAP = {
   'FUEL_REJECTED': 'คำขอเบิกค่าน้ำมันถูกปฏิเสธ'
 };
 
+const getLocalReadSet = () => {
+  try {
+    const raw = localStorage.getItem('qc_read_notifications_v1');
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+};
+
+const saveLocalReadSet = (set) => {
+  try {
+    localStorage.setItem('qc_read_notifications_v1', JSON.stringify(Array.from(set)));
+  } catch (e) {
+    console.warn('Could not save read set', e);
+  }
+};
+
 export default function Notifications() {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
@@ -49,9 +66,23 @@ export default function Notifications() {
     setError(null);
     try {
       const res = await apiCall('notification.list', {});
-      const list = Array.isArray(res) 
+      const rawList = Array.isArray(res) 
         ? res 
         : (Array.isArray(res?.notifications) ? res.notifications : (Array.isArray(res?.data) ? res.data : []));
+      
+      const localReadSet = getLocalReadSet();
+      const list = rawList.map(n => {
+        const notifId = n.notification_id || n.id;
+        const isServerRead = n.is_read === true || n.read === true || String(n.is_read).toUpperCase() === 'TRUE' || String(n.read).toUpperCase() === 'TRUE';
+        const isLocalRead = notifId ? localReadSet.has(notifId) : false;
+        const finalRead = isServerRead || isLocalRead;
+        return {
+          ...n,
+          is_read: finalRead,
+          read: finalRead
+        };
+      });
+
       setNotifications(list);
     } catch (err) {
       setError(err.message || 'ไม่สามารถดึงข้อมูลการแจ้งเตือนได้');
@@ -65,16 +96,24 @@ export default function Notifications() {
   }, []);
 
   const handleMarkRead = async (id, ticketId, shouldNavigate = true) => {
-    try {
-      await apiCall('notification.markRead', { notification_id: id });
-      setNotifications(prev => prev.map(n => 
-        (n.notification_id === id || n.id === id) ? { ...n, is_read: true, read: true } : n
-      ));
-      if (ticketId && shouldNavigate) {
-        navigate(`/tickets/${ticketId}`);
-      }
-    } catch (err) {
-      console.error('Failed to mark as read', err);
+    if (!id) return;
+
+    // 1. Immediately update persistent localStorage read set
+    const set = getLocalReadSet();
+    set.add(id);
+    saveLocalReadSet(set);
+
+    // 2. Update UI state instantly
+    setNotifications(prev => prev.map(n => 
+      (n.notification_id === id || n.id === id) ? { ...n, is_read: true, read: true } : n
+    ));
+
+    // 3. Send update to backend in background
+    apiCall('notification.markRead', { notification_id: id }).catch(e => console.warn(e));
+
+    // 4. Navigate if requested
+    if (ticketId && shouldNavigate) {
+      navigate(`/tickets/${ticketId}`);
     }
   };
 
@@ -82,18 +121,28 @@ export default function Notifications() {
     const unread = notifications.filter(n => !n.is_read && !n.read);
     if (unread.length === 0) return;
     
+    // 1. Immediately mark all in persistent localStorage read set
+    const set = getLocalReadSet();
+    notifications.forEach(n => {
+      const nid = n.notification_id || n.id;
+      if (nid) set.add(nid);
+    });
+    saveLocalReadSet(set);
+
+    // 2. Update UI state instantly
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true, read: true })));
+
+    // 3. Send update to backend
     setIsLoading(true);
     try {
       await apiCall('notification.markRead', { notification_id: 'ALL' });
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: true, read: true })));
     } catch (err) {
       try {
         await Promise.all(unread.map(n => 
           apiCall('notification.markRead', { notification_id: n.notification_id || n.id })
         ));
-        setNotifications(prev => prev.map(n => ({ ...n, is_read: true, read: true })));
       } catch (innerErr) {
-        setError(innerErr.message || 'ไม่สามารถทำเครื่องหมายว่าอ่านทั้งหมดได้');
+        console.warn('Backend mark all error', innerErr);
       }
     } finally {
       setIsLoading(false);
@@ -246,7 +295,7 @@ export default function Notifications() {
         <div className="bg-rose-50/60 p-4 rounded-2xl border border-rose-200 shadow-xs space-y-1">
           <div className="flex items-center justify-between text-rose-700 text-xs font-semibold">
             <span>ยังไม่ได้อ่าน</span>
-            <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+            {unreadCount > 0 && <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />}
           </div>
           <p className="text-2xl font-bold text-rose-700">{unreadCount}</p>
           <p className="text-[11px] text-rose-500 font-medium">ข้อความใหม่ที่ต้องดู</p>

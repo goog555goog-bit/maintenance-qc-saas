@@ -23,6 +23,13 @@ const NotificationService = {
     return map[eventStr] || eventStr;
   },
 
+  parseBoolean: function(val) {
+    if (val === true || val === 1) return true;
+    if (!val) return false;
+    const s = String(val).trim().toUpperCase();
+    return s === 'TRUE' || s === '1' || s === 'YES' || s === 'READ';
+  },
+
   notify: function(ticketId, eventStr, targetUserId, extraDetail) {
     const db = Database.getInstance();
     const eventThai = this.getEventThaiLabel(eventStr);
@@ -45,6 +52,7 @@ const NotificationService = {
     const db = Database.getInstance();
     const all = db.query('Notifications');
     const userId = userContext ? String(userContext.user_id).trim().toLowerCase() : '';
+    const self = this;
     
     // Filter for current user or broadcast
     const userNotifs = all.filter(function(n) {
@@ -58,7 +66,7 @@ const NotificationService = {
     });
     
     return userNotifs.map(function(n) {
-      const isRead = n.is_read === 'TRUE' || n.read === 'TRUE';
+      const isRead = self.parseBoolean(n.read) || self.parseBoolean(n.is_read);
       return {
         notification_id: n.notification_id,
         ticket_id: n.ticket_id || '',
@@ -79,16 +87,43 @@ const NotificationService = {
   markRead: function(payload, userContext) {
     Validation.requireFields(payload, ['notification_id']);
     const db = Database.getInstance();
-    if (payload.notification_id === 'ALL') {
-      const all = this.listNotifications({}, userContext);
-      all.forEach(function(n) {
-        try {
-          db.update('Notifications', 'notification_id', n.notification_id, { is_read: 'TRUE', read: 'TRUE' });
-        } catch (e) {}
-      });
-      return { success: true };
+    const targetId = String(payload.notification_id).trim();
+
+    try {
+      const sheet = db.getSheet('Notifications');
+      const data = sheet.getDataRange().getValues();
+      if (data.length > 1) {
+        const headers = data[0];
+        const idCol = headers.indexOf('notification_id');
+        const readCol = headers.indexOf('read');
+        const isReadCol = headers.indexOf('is_read');
+        const userCol = headers.indexOf('user_id');
+        const curUser = userContext ? String(userContext.user_id).trim().toLowerCase() : '';
+
+        if (targetId === 'ALL') {
+          for (let i = 1; i < data.length; i++) {
+            const rowUser = userCol !== -1 ? String(data[i][userCol]).trim().toLowerCase() : '';
+            if (!curUser || rowUser === curUser || rowUser === 'system_broadcast' || rowUser === '') {
+              if (readCol !== -1) sheet.getRange(i + 1, readCol + 1).setValue('TRUE');
+              if (isReadCol !== -1) sheet.getRange(i + 1, isReadCol + 1).setValue('TRUE');
+            }
+          }
+        } else {
+          if (idCol !== -1) {
+            for (let i = 1; i < data.length; i++) {
+              if (String(data[i][idCol]).trim().toUpperCase() === targetId.toUpperCase()) {
+                if (readCol !== -1) sheet.getRange(i + 1, readCol + 1).setValue('TRUE');
+                if (isReadCol !== -1) sheet.getRange(i + 1, isReadCol + 1).setValue('TRUE');
+                break;
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Error marking notification as read: " + e.message);
     }
-    db.update('Notifications', 'notification_id', payload.notification_id, { is_read: 'TRUE', read: 'TRUE' });
+    
     return { success: true };
   }
 };
