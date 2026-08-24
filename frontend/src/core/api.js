@@ -1,4 +1,5 @@
 import { CONFIG } from '../config';
+import { clearAuthSession, isTokenExpired } from './auth';
 
 export const getGasUrl = () => {
   const localUrl = localStorage.getItem('gas_api_url');
@@ -27,6 +28,18 @@ export async function apiCall(action, payload = {}) {
     throw new Error("ยังไม่ได้กำหนด Google Apps Script Web App URL");
   }
 
+  // Pre-check token expiration before calling protected actions
+  const publicActions = ['auth.login', 'auth.forgotPassword', 'auth.resetPassword'];
+  if (!publicActions.includes(action)) {
+    if (!token || isTokenExpired()) {
+      clearAuthSession();
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+      throw new Error("เซสชันการเข้าสู่ระบบหมดอายุ กรุณาเข้าสู่ระบบใหม่อีกครั้ง");
+    }
+  }
+
   try {
     const res = await fetch(gasUrl, {
       method: 'POST',
@@ -46,10 +59,17 @@ export async function apiCall(action, payload = {}) {
     }
 
     if (!data.success) {
-      if (action !== 'auth.login' && (data.error === 'Unauthorized' || (typeof data.error === 'string' && data.error.includes('Unauthorized')))) {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
-        localStorage.removeItem('auth_token_expiry');
+      const errStr = String(data.error || '').toLowerCase();
+      const isAuthError = 
+        errStr.includes('unauthorized') ||
+        errStr.includes('invalid token') ||
+        errStr.includes('token expired') ||
+        errStr.includes('session expired') ||
+        errStr.includes('session invalid') ||
+        errStr.includes('forbidden');
+
+      if (!publicActions.includes(action) && isAuthError) {
+        clearAuthSession();
         if (window.location.pathname !== '/login') {
           window.location.href = '/login';
         }
@@ -64,4 +84,3 @@ export async function apiCall(action, payload = {}) {
     throw err;
   }
 }
-

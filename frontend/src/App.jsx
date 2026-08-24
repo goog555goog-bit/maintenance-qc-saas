@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './core/auth';
+import { useAuth, clearAuthSession, isTokenExpired } from './core/auth';
 import Login from './pages/Login';
 import AdminDashboard from './pages/dashboard/AdminDashboard';
 import ManagerDashboard from './pages/dashboard/ManagerDashboard';
@@ -37,11 +37,12 @@ function getStoredRole() {
 }
 
 function PrivateRoute({ children, allowedRoles }) {
-  const { user } = useAuth();
   const token = localStorage.getItem('auth_token');
   const storedUserRole = getStoredRole();
+  const expired = isTokenExpired();
 
-  if (!token) {
+  if (!token || expired) {
+    clearAuthSession();
     return <Navigate to="/login" replace />;
   }
 
