@@ -150,6 +150,8 @@ const TicketService = {
     const reviews = db.query('Reviews', { ticket_id: ticket.ticket_id });
     const sessions = db.query('Work_Sessions', { ticket_id: ticket.ticket_id });
     const satisfactions = db.query('Satisfaction_Scores', { ticket_id: ticket.ticket_id });
+    const distances = db.query('Distance_Calculations', { ticket_id: ticket.ticket_id });
+    const fuelRate = FuelService.getFuelRate();
 
     // Active assignment details
     let activeTeamName = '';
@@ -178,6 +180,8 @@ const TicketService = {
       team_name: activeTeamName,
       assignments: assignments,
       checkins: checkins,
+      distances: distances,
+      fuel_rate: fuelRate,
       reviews: reviews,
       sessions: sessions,
       satisfaction: satisfactions.length > 0 ? satisfactions[0] : null

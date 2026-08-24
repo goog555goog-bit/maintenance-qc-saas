@@ -46,6 +46,38 @@ const GPSService = {
     } catch (e) {
       console.warn("Could not transition ticket status on checkin: " + e.message);
     }
+
+    // Auto-calculate Hop Distance from Previous Check-in / HQ
+    try {
+      const allCheckins = db.query('GPS_Checkins', { technician_id: userContext.user_id });
+      const sortedCheckins = allCheckins.filter(c => c.gps_id !== gpsId).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      
+      let fromLat = null, fromLon = null, fromGpsId = 'ORIGIN-HQ';
+      if (sortedCheckins.length > 0) {
+        const prev = sortedCheckins[0];
+        fromLat = Number(prev.latitude);
+        fromLon = Number(prev.longitude);
+        fromGpsId = prev.gps_id;
+      } else {
+        // Default Central HQ fallback (e.g. Bangkok Central / First Branch)
+        fromLat = Number(payload.latitude) - 0.1; // Default approximate base if first checkin
+        fromLon = Number(payload.longitude) - 0.1;
+      }
+
+      if (fromLat && fromLon && payload.latitude && payload.longitude) {
+        DistanceService.calculateAndStore(
+          payload.ticket_id,
+          fromGpsId,
+          gpsId,
+          fromLat,
+          fromLon,
+          Number(payload.latitude),
+          Number(payload.longitude)
+        );
+      }
+    } catch (e) {
+      console.warn("Could not calculate hop distance: " + e.message);
+    }
     
     AuditService.logActivity(userContext.user_id, userContext.role, 'CHECKIN', 'Ticket', payload.ticket_id, null, checkinType, 'GPS checkin recorded: ' + payload.latitude + ',' + payload.longitude);
     

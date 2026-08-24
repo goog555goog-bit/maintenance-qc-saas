@@ -445,29 +445,58 @@ export default function TicketDetail({ role: propRole }) {
 
           {/* TAB 5: GPS */}
           {activeTab === 'gps' && (
-            <div>
-              <h3 className="text-sm font-bold text-slate-800 mb-2">ข้อมูลพิกัด GPS ตอนเช็คอิน</h3>
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 mb-1">ข้อมูลพิกัด GPS และระยะทางช่วงการเดินทาง</h3>
+                <p className="text-xs text-slate-500">บันทึกพิกัดจริงที่ช่างกดเช็คอิน พร้อมคำนวณระยะทางต่อช่วง (Hop-by-Hop)</p>
+              </div>
+
+              {/* Distance Summary Card if available */}
+              {ticket?.distances && ticket.distances.length > 0 && (
+                <div className="bg-blue-50/60 border border-blue-200 rounded-xl p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-blue-900">ระยะทางเดินทางช่วงนี้ (Travel Leg):</span>
+                    <span className="text-sm font-bold text-blue-700">
+                      {Number(ticket.distances[ticket.distances.length - 1].straight_distance_km || 0).toFixed(1)} กม.
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-blue-800 pt-1 border-t border-blue-200/60">
+                    <span>ประมาณการค่าน้ำมัน (เรท {ticket.fuel_rate || 5.0} บ./กม.):</span>
+                    <span className="font-bold text-blue-900">
+                      {(Number(ticket.distances[ticket.distances.length - 1].straight_distance_km || 0) * Number(ticket.fuel_rate || 5.0)).toFixed(2)} บาท
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {ticket?.checkins && ticket.checkins.length > 0 ? (
                 <div className="space-y-2">
                   {ticket.checkins.map((chk, idx) => (
-                    <div key={idx} className="p-3 border rounded-lg bg-slate-50 text-xs text-slate-700 flex justify-between items-center">
+                    <div key={idx} className="p-3 border rounded-xl bg-slate-50 text-xs text-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
                       <div>
-                        <p className="font-semibold text-slate-800">ละติจูด: {chk.latitude}, ลองจิจูด: {chk.longitude}</p>
-                        <p className="text-slate-400 mt-0.5">เวลา: {new Date(chk.timestamp).toLocaleString('th-TH')}</p>
+                        <p className="font-semibold text-slate-800 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-blue-600" />
+                          <span>ละติจูด: {chk.latitude}, ลองจิจูด: {chk.longitude}</span>
+                        </p>
+                        <p className="text-slate-400 mt-0.5">
+                          เวลาเช็คอิน: {new Date(chk.timestamp || chk.created_at || Date.now()).toLocaleString('th-TH')}
+                        </p>
                       </div>
                       <a 
                         href={`https://www.google.com/maps?q=${chk.latitude},${chk.longitude}`} 
                         target="_blank" 
                         rel="noreferrer" 
-                        className="bg-blue-600 text-white px-2.5 py-1 rounded text-xs hover:bg-blue-700"
+                        className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors shadow-2xs text-center self-start sm:self-center"
                       >
-                        เปิดแผนที่
+                        เปิดดูบน Google Maps
                       </a>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-slate-400">ยังไม่มีข้อมูลการเช็คอิน GPS</p>
+                <div className="p-6 text-center border border-dashed border-slate-200 rounded-xl bg-slate-50 text-xs text-slate-400">
+                  ยังไม่มีข้อมูลการเช็คอิน GPS สำหรับใบงานนี้
+                </div>
               )}
             </div>
           )}
