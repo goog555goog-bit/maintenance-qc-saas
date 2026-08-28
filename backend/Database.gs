@@ -16,17 +16,40 @@ const Database = (function() {
       },
 
       getSheet: function(sheetName) {
-        return this.getSpreadsheet().getSheetByName(sheetName);
+        const ss = this.getSpreadsheet();
+        if (!ss) return null;
+        return ss.getSheetByName(sheetName);
+      },
+
+      ensureSheet: function(sheetName, defaultHeaders) {
+        const ss = this.getSpreadsheet();
+        if (!ss) return null;
+        let sheet = ss.getSheetByName(sheetName);
+        if (!sheet) {
+          sheet = ss.insertSheet(sheetName);
+          if (Array.isArray(defaultHeaders) && defaultHeaders.length > 0) {
+            sheet.appendRow(defaultHeaders);
+          }
+        }
+        return sheet;
       },
 
       getHeaders: function(sheet) {
-        const headerRow = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-        return headerRow;
+        if (!sheet || sheet.getLastColumn() === 0) return [];
+        try {
+          const headerRow = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+          return headerRow;
+        } catch (e) {
+          return [];
+        }
       },
 
       query: function(sheetName, filters = {}) {
         const sheet = this.getSheet(sheetName);
         if (!sheet) return [];
+        const lastRow = sheet.getLastRow();
+        if (lastRow <= 1) return [];
+
         const data = sheet.getDataRange().getValues();
         if (data.length <= 1) return [];
 
@@ -59,8 +82,21 @@ const Database = (function() {
         const lock = LockService.getScriptLock();
         lock.waitLock(10000);
         try {
-          const sheet = this.getSheet(sheetName);
-          const headers = this.getHeaders(sheet);
+          let sheet = this.getSheet(sheetName);
+          if (!sheet) {
+            const headers = Object.keys(obj);
+            sheet = this.ensureSheet(sheetName, headers);
+            const row = headers.map(h => (obj[h] !== undefined ? obj[h] : ""));
+            sheet.appendRow(row);
+            return;
+          }
+
+          let headers = this.getHeaders(sheet);
+          if (headers.length === 0) {
+            headers = Object.keys(obj);
+            sheet.appendRow(headers);
+          }
+
           const row = headers.map(h => (obj[h] !== undefined ? obj[h] : ""));
           sheet.appendRow(row);
         } finally {
@@ -73,16 +109,18 @@ const Database = (function() {
         lock.waitLock(10000);
         try {
           const sheet = this.getSheet(sheetName);
+          if (!sheet) return false;
+
           const data = sheet.getDataRange().getValues();
           if (data.length <= 1) return false;
 
           const headers = data[0];
           const keyIndex = headers.indexOf(keyField);
-          if (keyIndex === -1) throw new Error("Key field not found");
+          if (keyIndex === -1) return false;
 
           let updated = false;
           for (let i = 1; i < data.length; i++) {
-            if (data[i][keyIndex] == keyValue) {
+            if (String(data[i][keyIndex]).trim().toUpperCase() === String(keyValue).trim().toUpperCase()) {
               const rowNum = i + 1;
               for (const key in updateObj) {
                 const colIndex = headers.indexOf(key);
@@ -91,7 +129,7 @@ const Database = (function() {
                 }
               }
               updated = true;
-              break; // Assuming unique key
+              break;
             }
           }
           return updated;

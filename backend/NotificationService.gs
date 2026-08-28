@@ -91,6 +91,7 @@ const NotificationService = {
 
     try {
       const sheet = db.getSheet('Notifications');
+      if (!sheet) return { success: true };
       const data = sheet.getDataRange().getValues();
       if (data.length > 1) {
         const headers = data[0];
