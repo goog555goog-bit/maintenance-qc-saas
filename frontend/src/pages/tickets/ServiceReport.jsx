@@ -135,7 +135,7 @@ export default function ServiceReport() {
   const afterPhotos = ticket.photos?.filter(p => p.photo_type === 'AFTER') || ticket.after_photos || [];
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-16">
+    <div className="space-y-6 max-w-4xl mx-auto pb-16 print:p-0 print:m-0 print:max-w-none print:w-full print:space-y-0 print:pb-0">
       {/* Top Action Bar (Hidden when printing) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
         <button

@@ -41,3 +41,63 @@
     font-family: 'Inter', 'Noto Sans Thai', sans-serif;
   }
 }
+
+/* ========================================================================= */
+/* BULLETPROOF PRINT STYLES FOR SERVICE REPORT (A4 DOCUMENT)                 */
+/* ========================================================================= */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm 10mm 10mm;
+  }
+
+  /* 1. Hide all navigation menus, sidebars, headers, banners */
+  aside,
+  header,
+  nav,
+  .print\:hidden,
+  #sidebar,
+  .sidebar,
+  .topbar,
+  .offline-banner,
+  button,
+  a[href^="#"] {
+    display: none !important;
+  }
+
+  /* 2. Reset containers to full page without scrollbars or fixed heights */
+  html,
+  body,
+  #root,
+  .flex,
+  .flex-col,
+  .flex-1,
+  main,
+  div {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  body,
+  #root,
+  main {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* 3. Force exact background colors, borders, and images */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+}
