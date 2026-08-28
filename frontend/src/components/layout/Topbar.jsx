@@ -13,6 +13,7 @@ export default function Topbar() {
     if (path.startsWith('/dashboard/manager')) return 'แดชบอร์ดผู้จัดการสาขา';
     if (path.startsWith('/dashboard/tech')) return 'แดชบอร์ดช่างเทคนิค';
     if (path.startsWith('/tickets/new')) return 'สร้างใบแจ้งซ่อมใหม่';
+    if (path.includes('/report')) return 'ใบรายงานผลการปฏิบัติงาน (Service Report)';
     if (path.startsWith('/tickets/') && path !== '/tickets') return 'รายละเอียดใบแจ้งซ่อม';
     if (path === '/tickets') return 'รายการใบงานแจ้งซ่อม';
     if (path === '/assignments') return 'คิวจัดสรรและมอบหมายทีมช่าง';

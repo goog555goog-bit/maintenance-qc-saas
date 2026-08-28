@@ -1,10 +1,34 @@
-import React, { useState, useEffect } from 'react';
-import { Download, Calendar, BarChart2, Loader2, Award, TrendingUp, RotateCcw, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  Download, 
+  Calendar, 
+  BarChart2, 
+  Loader2, 
+  Award, 
+  TrendingUp, 
+  RotateCcw, 
+  CheckCircle2, 
+  FileText, 
+  Printer, 
+  Search, 
+  Building2, 
+  ArrowRight,
+  Filter,
+  Eye,
+  Star
+} from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { apiCall } from '@/core/api';
+import StatusBadge from '@/components/ui/StatusBadge';
 
 export default function Reports() {
+  const navigate = useNavigate();
+  const [tickets, setTickets] = useState([]);
   const [reportData, setReportData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('kpi'); // 'kpi' | 'service_reports'
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   useEffect(() => {
     fetchData();
@@ -14,10 +38,11 @@ export default function Reports() {
     setLoading(true);
     try {
       const res = await apiCall('ticket.list');
-      const tickets = Array.isArray(res) ? res : (Array.isArray(res?.tickets) ? res.tickets : (Array.isArray(res?.data) ? res.data : []));
+      const ticketsList = Array.isArray(res) ? res : (Array.isArray(res?.tickets) ? res.tickets : (Array.isArray(res?.data) ? res.data : []));
+      setTickets(ticketsList);
       
       const teamsMap = {};
-      tickets.forEach(t => {
+      ticketsList.forEach(t => {
         const teamName = t.team_name || t.team || 'ทีมส่วนกลาง';
         if (!teamsMap[teamName]) {
           teamsMap[teamName] = {
@@ -79,7 +104,7 @@ export default function Reports() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `qc_report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `qc_kpi_report_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -90,127 +115,269 @@ export default function Reports() {
   const ratedTeams = reportData.filter(d => d.avgRating !== '-');
   const overallAvgRating = ratedTeams.length > 0 ? (ratedTeams.reduce((acc, curr) => acc + Number(curr.avgRating), 0) / ratedTeams.length).toFixed(1) : '-';
 
+  // Filtered tickets for Service Reports tab
+  const filteredTickets = useMemo(() => {
+    return tickets.filter(t => {
+      if (statusFilter !== 'all' && t.status !== statusFilter) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.trim().toLowerCase();
+        const idMatch = String(t.ticket_id || '').toLowerCase().includes(q);
+        const branchMatch = String(t.branch_name || t.branch_id || '').toLowerCase().includes(q);
+        const teamMatch = String(t.team_name || t.team || '').toLowerCase().includes(q);
+        const catMatch = String(t.category_name || t.work_type_name || '').toLowerCase().includes(q);
+        return idMatch || branchMatch || teamMatch || catMatch;
+      }
+      return true;
+    });
+  }, [tickets, statusFilter, searchQuery]);
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">รายงานสรุปและสถิติภาพรวม</h1>
-          <p className="text-xs text-slate-500 mt-0.5">ดัชนีชี้วัดประสิทธิภาพงานซ่อมบำรุง คุณภาพงาน และสถิติรายทีมช่าง</p>
+          <h1 className="text-2xl font-bold text-slate-800">รายงานสรุปและใบรายงานผลงาน (Reports Hub)</h1>
+          <p className="text-xs text-slate-500 mt-0.5">ดัชนีชี้วัดประสิทธิภาพงานซ่อมบำรุง และคลังพิมพ์ใบรายงาน Service Report</p>
         </div>
+
         <div className="flex items-center gap-2">
-          <button 
-            onClick={handleDownloadCSV}
-            disabled={reportData.length === 0}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-1.5 transition-colors shadow-xs"
-          >
-            <Download className="w-4 h-4" />
-            <span>ส่งออกรายงาน CSV</span>
-          </button>
+          {activeTab === 'kpi' && (
+            <button 
+              onClick={handleDownloadCSV}
+              disabled={reportData.length === 0}
+              className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition-colors disabled:opacity-50 shadow-2xs"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span>ดาวน์โหลดรายงาน KPI (CSV)</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Summary KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">งานที่ปิดสำเร็จทั้งหมด</span>
-            <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
-              <CheckCircle2 className="w-4 h-4" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold text-slate-800 font-mono">{totalCompletedAll}</p>
-        </div>
-
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">อัตราแก้จบในครั้งแรกเฉลี่ย</span>
-            <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
-              <TrendingUp className="w-4 h-4" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold text-slate-800 font-mono">
-            {avgFixRate !== '-' ? `${avgFixRate}%` : '-'}
-          </p>
-        </div>
-
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">คะแนนความพึงพอใจเฉลี่ย</span>
-            <div className="p-2 rounded-lg bg-amber-50 text-amber-600">
-              <Award className="w-4 h-4" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold text-slate-800 font-mono">
-            {overallAvgRating !== '-' ? `${overallAvgRating} / 5` : '-'}
-          </p>
-        </div>
+      {/* Tabs */}
+      <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 w-fit text-xs font-semibold">
+        <button
+          onClick={() => setActiveTab('kpi')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
+            activeTab === 'kpi' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <BarChart2 className="w-4 h-4" />
+          <span>สถิติ KPI ประสิทธิภาพทีมช่าง</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('service_reports')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
+            activeTab === 'service_reports' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          <span>คลังใบรายงาน Service Report (PDF)</span>
+          <span className="bg-blue-50 text-blue-600 px-1.5 py-0.2 rounded-full text-[10px] font-bold border border-blue-200">
+            {tickets.length}
+          </span>
+        </button>
       </div>
 
-      {/* Team Performance Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-bold text-slate-800">ประสิทธิภาพการทำงานรายทีมช่าง</h2>
-            <p className="text-xs text-slate-400 mt-0.5">วิเคราะห์จำนวนงานที่สำเร็จ อัตรา First-Time-Fix และอัตราตีกลับแก้ไข</p>
-          </div>
+      {loading ? (
+        <div className="flex justify-center items-center py-24 bg-white rounded-2xl border border-slate-200 shadow-xs">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-2" />
         </div>
+      ) : activeTab === 'kpi' ? (
+        <div className="space-y-6">
+          {/* Summary Metric Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex items-center gap-4">
+              <div className="p-3.5 bg-blue-50 text-blue-600 rounded-2xl">
+                <CheckCircle2 className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 font-medium">งานที่ปิดสมบูรณ์ทั้งหมด</p>
+                <p className="text-2xl font-bold text-slate-800 font-mono">{totalCompletedAll} <span className="text-sm font-normal text-slate-400">ใบงาน</span></p>
+              </div>
+            </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-400 uppercase bg-slate-50/70">
-                <th className="py-3 px-4">ทีมช่าง</th>
-                <th className="py-3 px-4">จำนวนงานเสร็จสิ้น</th>
-                <th className="py-3 px-4">อัตราแก้จบครั้งแรก (First-Time Fix)</th>
-                <th className="py-3 px-4">อัตราตีกลับ (Rework Rate)</th>
-                <th className="py-3 px-4 text-right">คะแนนประเมินเฉลี่ย</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {loading ? (
-                <tr>
-                  <td colSpan="5" className="py-16 text-center text-slate-400">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-600" />
-                    <span>กำลังโหลดข้อมูลสถิติ...</span>
-                  </td>
-                </tr>
-              ) : reportData.length > 0 ? (
-                reportData.map((row, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3.5 px-4 font-semibold text-slate-800">{row.team}</td>
-                    <td className="py-3.5 px-4 font-mono font-medium text-slate-700">{row.completed} งาน</td>
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-emerald-700">{row.firstTimeFixRate.toFixed(1)}%</span>
-                        <div className="w-20 bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                          <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${row.firstTimeFixRate}%` }}></div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className={`font-semibold ${row.reworkRate > 20 ? 'text-rose-600' : 'text-slate-600'}`}>
-                        {row.reworkRate.toFixed(1)}%
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-800">
-                      {row.avgRating !== '-' ? `${row.avgRating} / 5` : '-'}
-                    </td>
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex items-center gap-4">
+              <div className="p-3.5 bg-emerald-50 text-emerald-600 rounded-2xl">
+                <TrendingUp className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 font-medium">อัตราการซ่อมจบในครั้งแรก (เฉลี่ย)</p>
+                <p className="text-2xl font-bold text-emerald-600 font-mono">{avgFixRate}%</p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex items-center gap-4">
+              <div className="p-3.5 bg-amber-50 text-amber-500 rounded-2xl">
+                <Award className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 font-medium">คะแนนความพึงพอใจเฉลี่ย</p>
+                <p className="text-2xl font-bold text-amber-600 font-mono">{overallAvgRating} <span className="text-sm font-normal text-slate-400">/ 5.0</span></p>
+              </div>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="p-5 border-b border-slate-100">
+              <h2 className="text-base font-bold text-slate-800">ผลการประเมินคุณภาพรายทีมช่าง (Quality Scorecard)</h2>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
+                    <th className="py-3 px-4">ทีมช่าง</th>
+                    <th className="py-3 px-4 text-center">งานที่เสร็จสิ้น</th>
+                    <th className="py-3 px-4 text-center">อัตราแก้จบครั้งแรก (FTFR)</th>
+                    <th className="py-3 px-4 text-center">อัตรางานตีกลับ (Rework)</th>
+                    <th className="py-3 px-4 text-center">คะแนนประเมินคุณภาพ</th>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="5" className="py-16 text-center text-slate-400">
-                    <BarChart2 className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-                    <p className="font-medium text-sm text-slate-600">ยังไม่มีข้อมูลสถิติเพียงพอ</p>
-                    <p className="text-xs text-slate-400 mt-1">สถิติจะถูกคำนวณอัตโนมัติเมื่อมีการปิดใบงานในระบบ</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {reportData.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-slate-400">
+                        ยังไม่มีข้อมูลงานที่ปิดสมบูรณ์สำหรับการประเมิน
+                      </td>
+                    </tr>
+                  ) : (
+                    reportData.map((row, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="py-3.5 px-4 font-bold text-slate-800">
+                          {row.team}
+                        </td>
+                        <td className="py-3.5 px-4 text-center font-mono font-semibold text-slate-700">
+                          {row.completed}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <span className="font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                            {row.firstTimeFixRate.toFixed(1)}%
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <span className={`font-mono font-semibold px-2 py-0.5 rounded ${
+                            row.reworkRate > 10 ? 'bg-rose-50 text-rose-700 border border-rose-100' : 'text-slate-500'
+                          }`}>
+                            {row.reworkRate.toFixed(1)}%
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <span className="font-mono font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100 inline-flex items-center gap-1">
+                            <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                            <span>{row.avgRating}</span>
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-      </div>
+      ) : (
+        /* ======================================================== */
+        /* TAB 2: คลังใบรายงาน Service Report (PDF)                   */
+        /* ======================================================== */
+        <div className="space-y-4">
+          {/* Filter Bar */}
+          <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+            <div className="relative flex-1 max-w-md">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                placeholder="ค้นหารหัสใบงาน, สาขา, หมวดหมู่งาน, หรือทีมช่าง..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-slate-50 focus:bg-white transition-all"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 outline-none focus:border-blue-500 font-medium text-slate-700"
+              >
+                <option value="all">สถานะ: ทั้งหมด ({tickets.length})</option>
+                <option value="CLOSED">ปิดงานสมบูรณ์ (CLOSED)</option>
+                <option value="COMPLETED_BY_TECH">ช่างส่งงานแล้ว (COMPLETED_BY_TECH)</option>
+                <option value="IN_PROGRESS">กำลังดำเนินงาน (IN_PROGRESS)</option>
+                <option value="ASSIGNED">มอบหมายแล้ว (ASSIGNED)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Service Reports Table */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-slate-800">
+                รายการใบรายงานพร้อมพิมพ์ ({filteredTickets.length} ฉบับ)
+              </h2>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
+                    <th className="py-3 px-4">รหัสใบงาน / เอกสาร</th>
+                    <th className="py-3 px-4">สาขา</th>
+                    <th className="py-3 px-4">หมวดหมู่งาน</th>
+                    <th className="py-3 px-4">ทีมช่าง</th>
+                    <th className="py-3 px-4">สถานะ</th>
+                    <th className="py-3 px-4 text-right">การเปิดเอกสาร</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredTickets.length > 0 ? (
+                    filteredTickets.map(t => (
+                      <tr key={t.ticket_id} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="py-3.5 px-4 font-mono font-bold text-blue-600">
+                          <Link to={`/tickets/${t.ticket_id}/report`} className="hover:underline flex items-center gap-1.5">
+                            <FileText className="w-3.5 h-3.5 text-slate-400" />
+                            <span>{t.ticket_id}</span>
+                          </Link>
+                        </td>
+                        <td className="py-3.5 px-4 font-medium text-slate-800">
+                          {t.branch_name || ('สาขา ' + t.branch_id)}
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-600">
+                          {t.category_name || t.work_type_name || 'งานซ่อมทั่วไป'}
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-700 font-medium">
+                          {t.team_name || t.team || '-'}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <StatusBadge status={t.status} size="xs" />
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Link
+                              to={`/tickets/${t.ticket_id}/report`}
+                              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors shadow-2xs"
+                            >
+                              <Printer className="w-3 h-3 text-blue-400" />
+                              <span>เปิด Service Report</span>
+                            </Link>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-slate-400">
+                        ไม่พบเอกสารใบรายงานที่ตรงตามเงื่อนไข
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

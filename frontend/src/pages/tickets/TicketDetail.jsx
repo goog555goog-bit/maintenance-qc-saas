@@ -246,6 +246,16 @@ export default function TicketDetail({ role: propRole }) {
             </p>
           </div>
         </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate(`/tickets/${id}/report`)}
+            className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
+          >
+            <FileText className="w-3.5 h-3.5 text-blue-400" />
+            <span>ใบรายงาน Service Report</span>
+          </button>
+        </div>
       </div>
 
       {/* Alerts */}

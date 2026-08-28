@@ -8,6 +8,7 @@ import TechDashboard from './pages/dashboard/TechDashboard';
 import TicketList from './pages/tickets/TicketList';
 import TicketCreate from './pages/tickets/TicketCreate';
 import TicketDetail from './pages/tickets/TicketDetail';
+import ServiceReport from './pages/tickets/ServiceReport';
 import AssignmentList from './pages/assignments/AssignmentList';
 import TeamManagement from './pages/teams/TeamManagement';
 import BranchManagement from './pages/branches/BranchManagement';
@@ -83,6 +84,7 @@ export default function App() {
           {/* Shared Routes */}
           <Route path="/tickets" element={<PrivateRoute allowedRoles={['admin', 'manager', 'tech']}><TicketList role={currentRole} /></PrivateRoute>} />
           <Route path="/tickets/:id" element={<PrivateRoute allowedRoles={['admin', 'manager', 'tech']}><TicketDetail role={currentRole} /></PrivateRoute>} />
+          <Route path="/tickets/:id/report" element={<PrivateRoute allowedRoles={['admin', 'manager', 'tech']}><ServiceReport /></PrivateRoute>} />
           <Route path="/archive" element={<PrivateRoute allowedRoles={['admin', 'manager', 'tech']}><ArchiveList role={currentRole} /></PrivateRoute>} />
           <Route path="/notifications" element={<PrivateRoute allowedRoles={['admin', 'manager', 'tech']}><Notifications /></PrivateRoute>} />
           <Route path="/profile" element={<PrivateRoute allowedRoles={['admin', 'manager', 'tech']}><UserProfile /></PrivateRoute>} />
