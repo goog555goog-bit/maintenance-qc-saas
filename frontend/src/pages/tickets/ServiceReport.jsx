@@ -83,6 +83,19 @@ export default function ServiceReport() {
     }
   };
 
+  const formatTimeOnly = (isoStr) => {
+    if (!isoStr) return '-';
+    try {
+      const date = new Date(isoStr);
+      return date.toLocaleTimeString('th-TH', {
+        hour: '2-digit',
+        minute: '2-digit'
+      }) + ' น.';
+    } catch {
+      return isoStr;
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col justify-center items-center min-h-[60vh] space-y-3">
@@ -110,29 +123,73 @@ export default function ServiceReport() {
     );
   }
 
+  // Real Database Field Resolution
+  const branchName = ticket.branch_name || (ticket.branch ? ticket.branch.branch_name : ('สาขา ' + (ticket.branch_id || '-')));
+  const branchAddress = ticket.branch?.address || ('ที่ตั้งสาขา ' + branchName);
+  const managerName = ticket.branch?.manager_name || ticket.created_by || 'ผู้จัดการสาขา';
+  const managerPhone = ticket.branch?.phone || '-';
+  const teamName = ticket.team_name || ticket.team || (ticket.assignments && ticket.assignments[0]?.team_id ? 'ทีม ' + ticket.assignments[0].team_id : 'รอจัดสรรทีมช่าง');
+  const categoryName = ticket.category_name || ticket.work_type_name || (ticket.items && ticket.items[0]?.category_name) || 'งานซ่อมบำรุงทั่วไป';
+  
+  // Symptoms / Problem overview
+  const itemsText = ticket.items && ticket.items.length > 0 
+    ? ticket.items.map(it => it.detail || it.description || it.category_name).filter(Boolean).join(', ')
+    : '';
+  const problemDescription = ticket.overview || ticket.description || itemsText || 'ไม่มีระบุรายละเอียดอาการเพิ่มเติม';
+
+  // Technician Diagnosis / Resolution Note
+  const latestSession = ticket.sessions && ticket.sessions.length > 0 ? ticket.sessions[ticket.sessions.length - 1] : null;
+  const technicianResolution = latestSession?.technician_note || ticket.technician_note || ticket.overview || 'ช่างเทคนิคดำเนินการตรวจเช็คและแก้ไขเรียบร้อยตามมาตรฐาน QC';
+
+  // Service Dates & Timestamps
+  const firstCheckin = ticket.checkins && ticket.checkins.length > 0 ? ticket.checkins[0] : null;
+  const serviceDate = firstCheckin ? (firstCheckin.device_time || firstCheckin.server_time || firstCheckin.created_at) : (ticket.updated_at || ticket.created_at);
+  const startTime = firstCheckin ? (firstCheckin.device_time || firstCheckin.server_time || firstCheckin.created_at) : null;
+  const endTime = latestSession?.submitted_at || latestSession?.ended_at || (['COMPLETED_BY_TECH', 'CLOSED', 'WAITING_REVIEW'].includes(ticket.status) ? ticket.updated_at : null);
+
+  // Calculate operation duration
+  let durationText = '-';
+  if (startTime && endTime) {
+    const diffMs = new Date(endTime).getTime() - new Date(startTime).getTime();
+    if (diffMs > 0) {
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+      const hours = Math.floor(diffMins / 60);
+      const mins = diffMins % 60;
+      durationText = hours > 0 ? `${hours} ชม. ${mins} นาที` : `${mins} นาที`;
+    }
+  }
+
   // Calculate distances & estimated fuel
   const latestDistance = ticket.distances && ticket.distances.length > 0 
     ? Number(ticket.distances[ticket.distances.length - 1].straight_distance_km || 0)
-    : 18.5; // fallback avg
+    : 0;
   
   const fuelRateVal = Number(ticket.fuel_rate || 5.0);
   const travelCost = latestDistance * fuelRateVal;
 
-  // Parts list (dynamic or fallback mock matching standard equipment repairs)
-  const spareParts = ticket.spare_parts && ticket.spare_parts.length > 0 ? ticket.spare_parts : [
-    { name: 'ชุดลูกปืนตลับ / Bearing Set (High Speed)', code: 'BRG-6204', qty: 1, unit: 'ชุด', unitPrice: 850, total: 850 },
-    { name: 'น้ำยาหล่อลื่นและซีลกันซึมสังเคราะห์', code: 'SEAL-SYN-01', qty: 1, unit: 'หลอด', unitPrice: 350, total: 350 }
-  ];
+  // Real Spare Parts List
+  const spareParts = Array.isArray(ticket.spare_parts) && ticket.spare_parts.length > 0 
+    ? ticket.spare_parts 
+    : [];
 
   const totalSparePartsCost = spareParts.reduce((acc, curr) => acc + Number(curr.total || 0), 0);
-  const laborCost = 600.0;
+  const laborCost = Number(ticket.labor_cost || 0);
   const subtotalBeforeVat = totalSparePartsCost + laborCost + travelCost;
   const vat7 = subtotalBeforeVat * 0.07;
   const grandTotal = subtotalBeforeVat + vat7;
 
-  // Photos
-  const beforePhotos = ticket.photos?.filter(p => p.photo_type === 'BEFORE') || ticket.before_photos || [];
-  const afterPhotos = ticket.photos?.filter(p => p.photo_type === 'AFTER') || ticket.after_photos || [];
+  // Photos (From Ticket_Items or Photos array)
+  const itemPhotos = (ticket.items || [])
+    .filter(it => it.image_url)
+    .map(it => ({ url: it.image_url, name: it.detail || it.category_name, photo_type: 'BEFORE' }));
+
+  const directPhotos = ticket.photos || [];
+  const allBeforePhotos = [...itemPhotos, ...directPhotos.filter(p => p.photo_type === 'BEFORE')];
+  const allAfterPhotos = directPhotos.filter(p => p.photo_type === 'AFTER');
+
+  // Satisfaction Review
+  const satisfactionScore = ticket.satisfaction?.score || ticket.satisfaction_score || null;
+  const satisfactionComment = ticket.satisfaction?.comment || (ticket.reviews && ticket.reviews[0]?.comments) || '';
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-16 print:p-0 print:m-0 print:max-w-none print:w-full print:space-y-0 print:pb-0">
@@ -169,10 +226,10 @@ export default function ServiceReport() {
       {/* ========================================================================= */}
       <div 
         ref={reportRef}
-        className="bg-white rounded-3xl border border-slate-200 shadow-md p-6 sm:p-10 space-y-8 text-slate-800 print:border-none print:shadow-none print:p-0 print:m-0 print:rounded-none"
+        className="bg-white rounded-3xl border border-slate-200 shadow-md p-6 sm:p-10 space-y-7 text-slate-800 print:border-none print:shadow-none print:p-0 print:m-0 print:rounded-none print:w-full"
       >
         {/* Document Header */}
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 border-b-2 border-slate-900 pb-6">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 border-b-2 border-slate-900 pb-5">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-xl font-black tracking-tight text-slate-900 uppercase">
@@ -193,8 +250,8 @@ export default function ServiceReport() {
                 {ticket.ticket_id}
               </span>
             </div>
-            <p className="text-[11px] text-slate-400">
-              สถานะ: <span className="font-semibold text-slate-700">{ticket.status}</span>
+            <p className="text-[11px] text-slate-500">
+              สถานะ: <span className="font-bold text-slate-800">{ticket.status}</span>
             </p>
           </div>
         </div>
@@ -217,39 +274,40 @@ export default function ServiceReport() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="font-semibold text-slate-500 shrink-0 w-28">ชื่อสาขา / รหัส:</span>
-              <span className="font-bold text-slate-900">{ticket.branch_name || ('สาขา ' + ticket.branch_id)}</span>
+              <span className="font-bold text-slate-900">{branchName}</span>
             </div>
             <div className="flex items-baseline gap-2">
               <span className="font-semibold text-slate-500 shrink-0 w-28">วันที่เข้าปฏิบัติงาน:</span>
-              <span className="text-slate-800">{formatDate(ticket.updated_at || ticket.created_at)}</span>
+              <span className="text-slate-800">{formatDate(serviceDate)}</span>
             </div>
             <div className="flex items-baseline gap-2">
               <span className="font-semibold text-slate-500 shrink-0 w-28">ที่อยู่สาขา:</span>
-              <span className="text-slate-800">{ticket.branch?.address || 'อาคารพาณิชย์ ถนนสุขุมวิท กรุงเทพฯ'}</span>
+              <span className="text-slate-800">{branchAddress}</span>
             </div>
             <div className="flex items-baseline gap-2">
-              <span className="font-semibold text-slate-500 shrink-0 w-28">ผู้จัดการสาขา / ผู้ติดต่อ:</span>
-              <span className="text-slate-800 font-medium">{ticket.branch?.manager_name || ticket.created_by || 'ผู้จัดการสาขา'}</span>
+              <span className="font-semibold text-slate-500 shrink-0 w-28">ผู้จัดการ / ผู้ติดต่อ:</span>
+              <span className="text-slate-800 font-medium">{managerName} {managerPhone !== '-' && `(${managerPhone})`}</span>
             </div>
             <div className="flex items-baseline gap-2">
               <span className="font-semibold text-slate-500 shrink-0 w-28">ทีมช่างผู้รับผิดชอบ:</span>
-              <span className="font-bold text-blue-700">{ticket.team_name || ticket.team || 'ทีมช่างเทคนิคส่วนกลาง'}</span>
+              <span className="font-bold text-blue-700">{teamName}</span>
             </div>
             <div className="flex items-baseline gap-2">
               <span className="font-semibold text-slate-500 shrink-0 w-28">ระดับความเร่งด่วน:</span>
               <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${
-                ticket.priority === 'URGENT' ? 'bg-rose-100 text-rose-800' : 'bg-slate-200 text-slate-800'
+                ticket.priority === 'URGENT' ? 'bg-rose-100 text-rose-800' : 
+                ticket.priority === 'HIGH' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-800'
               }`}>
                 {ticket.priority === 'URGENT' ? 'ฉุกเฉินที่สุด (URGENT)' : ticket.priority === 'HIGH' ? 'เร่งด่วน (HIGH)' : 'ปกติ (NORMAL)'}
               </span>
             </div>
             <div className="flex items-baseline gap-2 md:col-span-2 pt-1 border-t border-slate-200/60">
               <span className="font-semibold text-slate-500 shrink-0 w-28">หมวดหมู่งานซ่อม:</span>
-              <span className="font-semibold text-slate-900">{ticket.category_name || ticket.work_type_name || 'งานซ่อมบำรุงทั่วไป'}</span>
+              <span className="font-semibold text-slate-900">{categoryName}</span>
             </div>
             <div className="flex items-start gap-2 md:col-span-2">
               <span className="font-semibold text-slate-500 shrink-0 w-28">อาการปัญหาที่พบ:</span>
-              <span className="text-slate-800 leading-relaxed font-medium">{ticket.overview || ticket.description || 'อุปกรณ์ชำรุด มีเสียงดังผิดปกติและระบบตัดการทำงาน'}</span>
+              <span className="text-slate-800 leading-relaxed font-medium">{problemDescription}</span>
             </div>
           </div>
         </div>
@@ -272,8 +330,8 @@ export default function ServiceReport() {
                 <span className="text-[10px] text-slate-400">สภาพปัญหาเดิม</span>
               </div>
               <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-2xl border border-slate-200 min-h-[140px] items-center">
-                {beforePhotos.length > 0 ? (
-                  beforePhotos.map((p, idx) => (
+                {allBeforePhotos.length > 0 ? (
+                  allBeforePhotos.map((p, idx) => (
                     <div key={idx} className="aspect-4/3 rounded-xl overflow-hidden border border-slate-200 bg-white">
                       <img 
                         src={p.photo_url || p.url || p} 
@@ -285,7 +343,7 @@ export default function ServiceReport() {
                 ) : (
                   <div className="col-span-2 flex flex-col items-center justify-center text-center p-4 text-slate-400 text-xs">
                     <Camera className="w-6 h-6 text-slate-300 mb-1" />
-                    <span>บันทึกภาพถ่ายสภาพก่อนซ่อมเรียบร้อย</span>
+                    <span>ไม่มีรูปภาพก่อนซ่อมที่แนบไว้</span>
                   </div>
                 )}
               </div>
@@ -301,8 +359,8 @@ export default function ServiceReport() {
                 <span className="text-[10px] text-slate-400">ผลงานเสร็จสมบูรณ์</span>
               </div>
               <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-2xl border border-slate-200 min-h-[140px] items-center">
-                {afterPhotos.length > 0 ? (
-                  afterPhotos.map((p, idx) => (
+                {allAfterPhotos.length > 0 ? (
+                  allAfterPhotos.map((p, idx) => (
                     <div key={idx} className="aspect-4/3 rounded-xl overflow-hidden border border-slate-200 bg-white">
                       <img 
                         src={p.photo_url || p.url || p} 
@@ -314,7 +372,7 @@ export default function ServiceReport() {
                 ) : (
                   <div className="col-span-2 flex flex-col items-center justify-center text-center p-4 text-slate-400 text-xs">
                     <Camera className="w-6 h-6 text-slate-300 mb-1" />
-                    <span>บันทึกภาพถ่ายผลงานหลังซ่อมเรียบร้อย</span>
+                    <span>ไม่มีรูปภาพหลังซ่อมที่แนบไว้</span>
                   </div>
                 )}
               </div>
@@ -333,29 +391,38 @@ export default function ServiceReport() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <span className="font-semibold text-slate-500 block mb-0.5">อุปกรณ์ / เครื่องจักร:</span>
-                <p className="font-bold text-slate-800">{ticket.category_name || 'เครื่องปรับอากาศและระบบระบายอากาศ'}</p>
+                <p className="font-bold text-slate-800">{categoryName}</p>
               </div>
               <div>
                 <span className="font-semibold text-slate-500 block mb-0.5">หมวดหมู่หลัก (Category):</span>
-                <p className="font-semibold text-slate-800">{ticket.work_type_name || ticket.category_name || 'งานระบบไฟฟ้าและปรับอากาศ'}</p>
+                <p className="font-semibold text-slate-800">{ticket.work_type_name || categoryName}</p>
               </div>
               <div>
                 <span className="font-semibold text-slate-500 block mb-0.5">ประเภทปัญหา (Problem Type):</span>
-                <p className="font-semibold text-slate-800">การสึกหรอตามอายุการใช้งาน (Normal Wear & Tear)</p>
+                <p className="font-semibold text-slate-800">
+                  {ticket.priority === 'URGENT' ? 'งานซ่อมบำรุงฉุกเฉิน (Urgent Corrective)' : 
+                   ticket.priority === 'HIGH' ? 'งานซ่อมบำรุงเร่งด่วน (High Priority)' : 'งานซ่อมบำรุงทั่วไป (General Maintenance)'}
+                </p>
               </div>
             </div>
+
+            {ticket.items && ticket.items.length > 0 && (
+              <div className="pt-2 border-t border-slate-200/60">
+                <span className="font-semibold text-slate-500 block mb-1">รายการจุดซ่อมที่ระบุในใบงาน:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {ticket.items.map((it, idx) => (
+                    <span key={idx} className="bg-white px-2.5 py-1 rounded-lg border border-slate-200 font-medium text-slate-800">
+                      จุดที่ {idx + 1}: {it.detail || it.description || it.category_name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="pt-2 border-t border-slate-200/60 space-y-1">
               <span className="font-semibold text-slate-500 block">ผลการตรวจเช็คและวิธีแก้ไขของช่าง:</span>
               <p className="text-slate-800 bg-white p-3 rounded-xl border border-slate-200 leading-relaxed font-medium">
-                {ticket.technician_note || ticket.overview || 'ทำการตรวจเช็ควงจรไฟฟ้า เปลี่ยนลูกปืนและซีลกันซึมใหม่ ทำความสะอาดคอยล์เย็น และทดสอบระบบการทำงาน 30 นาที ผลการทดสอบอุณหภูมิและความดันปกติ เสียงเงียบ พร้อมส่งมอบงาน'}
-              </p>
-            </div>
-
-            <div className="pt-1">
-              <span className="font-semibold text-slate-500 block mb-0.5">ข้อแนะนำในการดูแลรักษา (Recommendations):</span>
-              <p className="text-slate-700 italic">
-                แนะนำให้ทำความสะอาดแผ่นกรองอากาศทุก 2 สัปดาห์ และตรวจเช็คระบบน้ำยาตามรอบบำรุงรักษาทุก 3 เดือน
+                {technicianResolution}
               </p>
             </div>
           </div>
@@ -380,18 +447,26 @@ export default function ServiceReport() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {spareParts.map((sp, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/50">
-                    <td className="py-2.5 px-4 text-center text-slate-400 font-mono">{idx + 1}</td>
-                    <td className="py-2.5 px-4 font-medium text-slate-800">
-                      <div>{sp.name}</div>
-                      {sp.code && <div className="text-[10px] font-mono text-slate-400">{sp.code}</div>}
+                {spareParts.length > 0 ? (
+                  spareParts.map((sp, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50/50">
+                      <td className="py-2.5 px-4 text-center text-slate-400 font-mono">{idx + 1}</td>
+                      <td className="py-2.5 px-4 font-medium text-slate-800">
+                        <div>{sp.name || sp.item_name}</div>
+                        {sp.code && <div className="text-[10px] font-mono text-slate-400">{sp.code}</div>}
+                      </td>
+                      <td className="py-2.5 px-4 text-center">{sp.qty} {sp.unit || 'ชิ้น'}</td>
+                      <td className="py-2.5 px-4 text-right font-mono">{Number(sp.unitPrice || sp.unit_price || 0).toFixed(2)}</td>
+                      <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900">{Number(sp.total || 0).toFixed(2)}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="py-3 px-4 text-center text-slate-400 italic">
+                      ไม่มีการเบิกใช้อะไหล่เพิ่มเติมในใบงานนี้ (งานตรวจเช็ค / บำรุงรักษาเชิงปฏิบัติการ)
                     </td>
-                    <td className="py-2.5 px-4 text-center">{sp.qty} {sp.unit || 'ชิ้น'}</td>
-                    <td className="py-2.5 px-4 text-right font-mono">{Number(sp.unitPrice || 0).toFixed(2)}</td>
-                    <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900">{Number(sp.total || 0).toFixed(2)}</td>
                   </tr>
-                ))}
+                )}
               </tbody>
               <tfoot>
                 <tr className="bg-slate-50 border-t border-slate-200 font-bold">
@@ -412,20 +487,20 @@ export default function ServiceReport() {
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs bg-slate-50/70 p-3.5 rounded-2xl border border-slate-200/80">
             <div>
-              <span className="text-slate-500 block mb-0.5">เวลาเริ่มงาน:</span>
-              <p className="font-bold text-slate-800">10:00 น.</p>
+              <span className="text-slate-500 block mb-0.5">เวลาเริ่มงาน (Check-in):</span>
+              <p className="font-bold text-slate-800">{startTime ? formatTimeOnly(startTime) : '-'}</p>
             </div>
             <div>
-              <span className="text-slate-500 block mb-0.5">เวลาเสร็จสิ้น:</span>
-              <p className="font-bold text-slate-800">11:30 น.</p>
+              <span className="text-slate-500 block mb-0.5">เวลาเสร็จสิ้น (Submit):</span>
+              <p className="font-bold text-slate-800">{endTime ? formatTimeOnly(endTime) : '-'}</p>
             </div>
             <div>
               <span className="text-slate-500 block mb-0.5">รวมเวลาปฏิบัติงาน:</span>
-              <p className="font-bold text-slate-800">1 ชม. 30 นาที</p>
+              <p className="font-bold text-slate-800">{durationText}</p>
             </div>
             <div>
               <span className="text-slate-500 block mb-0.5">ระยะทางเดินทาง (GPS):</span>
-              <p className="font-bold text-blue-700 font-mono">{latestDistance.toFixed(1)} กม.</p>
+              <p className="font-bold text-blue-700 font-mono">{latestDistance > 0 ? `${latestDistance.toFixed(1)} กม.` : '-'}</p>
             </div>
           </div>
         </div>
@@ -495,13 +570,13 @@ export default function ServiceReport() {
               {/* Signature display box */}
               <div className="h-24 border border-dashed border-slate-300 rounded-xl bg-white flex items-center justify-center p-2">
                 <span className="font-serif italic text-lg text-slate-700 tracking-wider">
-                  {ticket.team_name || 'ช่างเทคนิคประจำศูนย์'}
+                  {teamName}
                 </span>
               </div>
 
               <div className="text-[11px] text-slate-500 space-y-0.5">
-                <p className="font-semibold text-slate-800">({ticket.team_name || ticket.team || 'ทีมช่างเทคนิคผู้ปฏิบัติงาน'})</p>
-                <p>วันที่: {formatDate(ticket.updated_at || ticket.created_at)}</p>
+                <p className="font-semibold text-slate-800">({teamName})</p>
+                <p>วันที่: {formatDate(serviceDate)}</p>
               </div>
             </div>
 
@@ -512,18 +587,22 @@ export default function ServiceReport() {
               {/* Signature display box */}
               <div className="h-24 border border-dashed border-slate-300 rounded-xl bg-white flex flex-col items-center justify-center p-2">
                 <span className="font-serif italic text-lg text-emerald-700 tracking-wider">
-                  {ticket.branch?.manager_name || 'ผู้จัดการสาขา'}
+                  {managerName}
                 </span>
-                <div className="flex items-center gap-1 text-amber-500 mt-1">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />
-                  ))}
-                  <span className="text-[10px] font-bold text-slate-700 ml-1">5.0 (ดีเยี่ยม)</span>
-                </div>
+                {satisfactionScore ? (
+                  <div className="flex items-center gap-1 text-amber-500 mt-1">
+                    {[...Array(Math.min(5, Number(satisfactionScore)))].map((_, i) => (
+                      <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />
+                    ))}
+                    <span className="text-[10px] font-bold text-slate-700 ml-1">{Number(satisfactionScore).toFixed(1)}</span>
+                  </div>
+                ) : (
+                  <span className="text-[10px] text-slate-400 mt-1">อยู่ระหว่างรอการตรวจรับจากสาขา</span>
+                )}
               </div>
 
               <div className="text-[11px] text-slate-500 space-y-0.5">
-                <p className="font-semibold text-slate-800">({ticket.branch?.manager_name || ticket.created_by || 'ผู้จัดการสาขา'})</p>
+                <p className="font-semibold text-slate-800">({managerName})</p>
                 <p>วันที่: {formatDate(ticket.updated_at || ticket.created_at)}</p>
               </div>
             </div>
