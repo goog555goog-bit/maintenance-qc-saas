@@ -151,6 +151,7 @@ const TicketService = {
     const sessions = db.query('Work_Sessions', { ticket_id: ticket.ticket_id });
     const satisfactions = db.query('Satisfaction_Scores', { ticket_id: ticket.ticket_id });
     const distances = db.query('Distance_Calculations', { ticket_id: ticket.ticket_id });
+    const spareParts = db.query('Ticket_Spare_Parts', { ticket_id: ticket.ticket_id });
     const fuelRate = FuelService.getFuelRate();
 
     // Active assignment details
@@ -181,6 +182,7 @@ const TicketService = {
       assignments: assignments,
       checkins: checkins,
       distances: distances,
+      spare_parts: spareParts,
       fuel_rate: fuelRate,
       reviews: reviews,
       sessions: sessions,

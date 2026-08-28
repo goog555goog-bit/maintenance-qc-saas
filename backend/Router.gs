@@ -319,6 +319,18 @@ const Router = {
       case 'notification.markRead':
         return NotificationService.markRead(payload, userContext);
 
+      // ---- Spare Parts ----
+      case 'spare_part.list':
+        return SparePartService.listSpareParts(payload, userContext);
+      case 'spare_part.create':
+        return SparePartService.createSparePart(payload, userContext);
+      case 'spare_part.update':
+        return SparePartService.updateSparePart(payload, userContext);
+      case 'spare_part.delete':
+        return SparePartService.deleteSparePart(payload, userContext);
+      case 'ticket.spare_parts.save':
+        return SparePartService.saveTicketSpareParts(payload, userContext);
+
       // ---- Reports / Archive ----
       case 'report.summary':
         return TicketService.getReportSummary(payload, userContext);

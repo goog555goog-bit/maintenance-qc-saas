@@ -12,6 +12,7 @@ import ServiceReport from './pages/tickets/ServiceReport';
 import AssignmentList from './pages/assignments/AssignmentList';
 import TeamManagement from './pages/teams/TeamManagement';
 import BranchManagement from './pages/branches/BranchManagement';
+import SparePartsManagement from './pages/spare-parts/SparePartsManagement';
 import FuelRates from './pages/fuel/FuelRates';
 import FuelReview from './pages/fuel/FuelReview';
 import Reports from './pages/reports/Reports';
@@ -69,6 +70,7 @@ export default function App() {
           <Route path="/assignments" element={<PrivateRoute allowedRoles={['admin']}><AssignmentList /></PrivateRoute>} />
           <Route path="/teams" element={<PrivateRoute allowedRoles={['admin']}><TeamManagement /></PrivateRoute>} />
           <Route path="/branches" element={<PrivateRoute allowedRoles={['admin']}><BranchManagement /></PrivateRoute>} />
+          <Route path="/spare-parts" element={<PrivateRoute allowedRoles={['admin']}><SparePartsManagement /></PrivateRoute>} />
           <Route path="/fuel/rates" element={<PrivateRoute allowedRoles={['admin']}><FuelRates /></PrivateRoute>} />
           <Route path="/fuel/review" element={<PrivateRoute allowedRoles={['admin']}><FuelReview /></PrivateRoute>} />
           <Route path="/reports" element={<PrivateRoute allowedRoles={['admin']}><Reports /></PrivateRoute>} />

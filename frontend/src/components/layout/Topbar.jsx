@@ -19,6 +19,7 @@ export default function Topbar() {
     if (path === '/assignments') return 'คิวจัดสรรและมอบหมายทีมช่าง';
     if (path === '/teams') return 'จัดการทีมช่าง';
     if (path === '/branches') return 'ข้อมูลสาขา';
+    if (path === '/spare-parts') return 'จัดการฐานข้อมูลอะไหล่';
     if (path === '/fuel/rates') return 'กำหนดเรทค่าน้ำมัน';
     if (path === '/fuel/review') return 'ตรวจสอบและอนุมัติค่าน้ำมัน';
     if (path === '/reports') return 'รายงานสรุปและสถิติ';
