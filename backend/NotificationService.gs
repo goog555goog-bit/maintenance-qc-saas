@@ -151,6 +151,7 @@ const NotificationService = {
         TelegramService.sendMessage(chatId, text, replyMarkup);
       }
     });
+  },
 
   listNotifications: function(payload, userContext) {
     const db = Database.getInstance();
