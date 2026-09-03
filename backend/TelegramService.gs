@@ -112,118 +112,68 @@ const TelegramService = {
   },
 
   handleWebhook: function(update) {
-    if (!update) return { ok: true, status: 'NO_UPDATE' };
+    if (!update) return { ok: true };
 
-    // 1. Deduplicate by update_id to prevent Telegram retry spam
+    // 1. Deduplicate by update_id to instantly ignore Telegram retries
     const updateId = String(update.update_id || '').trim();
     if (updateId) {
       try {
         const cache = CacheService.getScriptCache();
         if (cache.get('tg_upd_' + updateId)) {
-          return { ok: true, status: 'DUPLICATE_IGNORED' };
+          return { ok: true };
         }
         cache.put('tg_upd_' + updateId, '1', 600);
-      } catch (cacheErr) {
-        console.warn('Cache check error:', cacheErr);
-      }
+      } catch (cacheErr) {}
     }
 
     const message = update.message;
-    if (!message) return { ok: true, status: 'NO_MESSAGE' };
+    if (!message) return { ok: true };
 
     const chatId = message.chat ? message.chat.id : null;
     const fromUser = message.from || {};
     const text = String(message.text || '').trim();
 
-    if (!chatId) return { ok: true, status: 'NO_CHAT_ID' };
+    if (!chatId) return { ok: true };
 
-    // 2. Rate-limit welcome messages to same user (max 1 per 60 seconds)
+    // 2. Prevent repeating welcome messages within 2 minutes
     if (text.indexOf('/start') === 0) {
       try {
         const cache = CacheService.getScriptCache();
         const welcomeKey = 'tg_welc_' + chatId;
         if (cache.get(welcomeKey)) {
-          return { ok: true, status: 'WELCOME_RATE_LIMITED' };
+          return { ok: true };
         }
-        cache.put(welcomeKey, '1', 60);
+        cache.put(welcomeKey, '1', 120);
       } catch (e) {}
     }
 
-    const db = Database.getInstance();
-    const now = new Date().toISOString();
-
-    // Check if user exists in Telegram_Users sheet
-    const existing = db.query('Telegram_Users', { telegram_chat_id: String(chatId) });
-    let linkedUserId = '';
-
-    // Check if start command has deep link parameter: e.g. /start bind_EMP-0001
-    if (text.indexOf('/start') === 0) {
-      const parts = text.split(' ');
-      if (parts.length > 1 && parts[1].indexOf('bind_') === 0) {
-        linkedUserId = parts[1].replace('bind_', '').trim();
-      }
-    }
-
-    if (existing.length === 0) {
-      db.insert('Telegram_Users', {
-        telegram_chat_id: String(chatId),
-        username: fromUser.username || '',
-        first_name: fromUser.first_name || '',
-        last_name: fromUser.last_name || '',
-        user_id: linkedUserId,
-        created_at: now,
-        updated_at: now
-      });
-    } else {
-      const updates = {
-        username: fromUser.username || existing[0].username || '',
-        first_name: fromUser.first_name || existing[0].first_name || '',
-        last_name: fromUser.last_name || existing[0].last_name || '',
-        updated_at: now
-      };
-      if (linkedUserId) {
-        updates.user_id = linkedUserId;
-      }
-      db.update('Telegram_Users', 'telegram_chat_id', String(chatId), updates);
-    }
-
-    // If bound to a user_id, also update Users table
-    if (linkedUserId) {
-      try {
-        db.update('Users', 'user_id', linkedUserId, { telegram_chat_id: String(chatId) });
-      } catch (e) {
-        console.warn('Could not update user telegram_chat_id: ' + e.message);
-      }
-    }
-
-    // Automatically set the persistent Chat Menu Button to Open Web App
+    // 3. Fast Webhook Reply: Respond immediately with sendMessage method
+    // This executes in under 0.5s without UrlFetchApp, stopping all Telegram retry loops!
     const miniAppUrl = this.getMiniAppUrl();
-    this.setChatMenuButton(chatId, miniAppUrl, 'เปิดระบบซ่อมบำรุง');
-
-    // Build welcome response message
     if (text.indexOf('/start') === 0) {
       let welcomeMsg = '<b>ยินดีต้อนรับสู่ระบบบริหารงานซ่อมบำรุง (Maintenance QC SaaS)</b>\n\n';
       welcomeMsg += 'ท่านได้เชื่อมต่อกับระบบเรียบร้อยแล้ว\n';
-      if (linkedUserId) {
-        welcomeMsg += 'ผูกบัญชีผู้ใช้รหัส: <code>' + linkedUserId + '</code> สำเร็จ\n';
-      }
-      welcomeMsg += '\nระบบได้เปลี่ยนปุ่มแถบล่างเป็น <b>"เปิดระบบซ่อมบำรุง"</b> ให้เรียบร้อยแล้ว หรือสามารถแตะปุ่มด้านล่างนี้เพื่อเปิดใช้งานได้ทันที';
+      welcomeMsg += '\nสามารถแตะปุ่มด้านล่างเพื่อเปิดระบบซ่อมบำรุงได้ทันที';
 
-      const replyMarkup = {
-        inline_keyboard: [
-          [
-            {
-              text: 'เปิดระบบซ่อมบำรุง (Open App)',
-              web_app: { url: miniAppUrl }
-            }
+      return {
+        method: 'sendMessage',
+        chat_id: chatId,
+        text: welcomeMsg,
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: 'เปิดระบบซ่อมบำรุง (Open App)',
+                web_app: { url: miniAppUrl }
+              }
+            ]
           ]
-        ]
+        }
       };
-
-      this.sendMessage(chatId, welcomeMsg, replyMarkup);
     }
 
-    return { ok: true, status: 'SUCCESS', chat_id: chatId };
+    return { ok: true };
   },
 
   bindUserTelegram: function(payload, userContext) {
