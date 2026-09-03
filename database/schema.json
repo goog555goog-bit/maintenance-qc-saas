@@ -24,6 +24,7 @@
     { "name": "Notifications", "columns": ["notification_id", "user_id", "message", "read", "created_at"] },
     { "name": "Attachments", "columns": ["attachment_id", "entity_type", "entity_id", "drive_file_id", "uploaded_by", "uploaded_at"] },
     { "name": "System_Config", "columns": ["key", "value", "updated_at", "updated_by"] },
+    { "name": "Telegram_Users", "columns": ["telegram_chat_id", "username", "first_name", "last_name", "user_id", "created_at", "updated_at"] },
     { "name": "Error_Log", "columns": ["error_id", "timestamp", "user_id", "error_message", "stack_trace", "context_json"] }
   ]
 }

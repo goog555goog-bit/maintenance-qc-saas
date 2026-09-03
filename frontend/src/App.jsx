@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth, clearAuthSession, isTokenExpired } from './core/auth';
+import { initTelegramApp, autoBindTelegramIfInMiniApp } from './core/telegram';
 import Login from './pages/Login';
 import AdminDashboard from './pages/dashboard/AdminDashboard';
 import ManagerDashboard from './pages/dashboard/ManagerDashboard';
@@ -58,6 +59,11 @@ function PrivateRoute({ children, allowedRoles }) {
 
 export default function App() {
   const currentRole = getStoredRole() || 'admin';
+
+  useEffect(() => {
+    initTelegramApp();
+    autoBindTelegramIfInMiniApp();
+  }, []);
 
   return (
     <BrowserRouter>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { User, Key, Mail, Shield, AlertCircle, CheckCircle2, Loader2, Save, Lock, Briefcase } from 'lucide-react';
+import { User, Key, Mail, Shield, AlertCircle, CheckCircle2, Loader2, Save, Lock, Briefcase, Send, Bell, Unlink, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/core/auth';
 import { apiCall } from '@/core/api';
+import { isTelegramWebApp, getTelegramUser } from '@/core/telegram';
 
 export default function UserProfile() {
   const { user, login } = useAuth();
@@ -17,6 +18,85 @@ export default function UserProfile() {
   const [passLoading, setPassLoading] = useState(false);
   const [passSuccess, setPassSuccess] = useState('');
   const [passError, setPassError] = useState('');
+
+  // Telegram States
+  const [tgStatus, setTgStatus] = useState(null);
+  const [tgLoading, setTgLoading] = useState(false);
+  const [tgSuccess, setTgSuccess] = useState('');
+  const [tgError, setTgError] = useState('');
+  const [manualChatId, setManualChatId] = useState('');
+  const inMiniApp = isTelegramWebApp();
+  const currentTgUser = getTelegramUser();
+
+  const fetchTgStatus = async () => {
+    try {
+      const res = await apiCall('telegram.status', {});
+      setTgStatus(res || null);
+      if (res && res.telegram_chat_id) {
+        setManualChatId(res.telegram_chat_id);
+      }
+    } catch (e) {
+      console.warn('Could not fetch telegram status:', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchTgStatus();
+  }, []);
+
+  const handleBindTelegram = async (chatIdToUse) => {
+    const targetId = chatIdToUse || manualChatId;
+    if (!targetId || !targetId.trim()) {
+      setTgError('กรุณาระบุ Telegram Chat ID');
+      return;
+    }
+    setTgLoading(true);
+    setTgError('');
+    setTgSuccess('');
+    try {
+      await apiCall('telegram.bind', {
+        telegram_chat_id: String(targetId).trim(),
+        username: currentTgUser?.username || '',
+        first_name: currentTgUser?.first_name || ''
+      });
+      setTgSuccess('เชื่อมต่อบัญชี Telegram สำหรับรับแจ้งเตือนสำเร็จ');
+      fetchTgStatus();
+    } catch (err) {
+      setTgError(err.message || 'ไม่สามารถเชื่อมต่อ Telegram ได้');
+    } finally {
+      setTgLoading(false);
+    }
+  };
+
+  const handleUnbindTelegram = async () => {
+    if (!window.confirm('คุณต้องการยกเลิกการเชื่อมต่อ Telegram ใช่หรือไม่?')) return;
+    setTgLoading(true);
+    setTgError('');
+    setTgSuccess('');
+    try {
+      await apiCall('telegram.unbind', {});
+      setTgSuccess('ยกเลิกการเชื่อมต่อ Telegram เรียบร้อยแล้ว');
+      fetchTgStatus();
+    } catch (err) {
+      setTgError(err.message || 'ไม่สามารถยกเลิกการเชื่อมต่อได้');
+    } finally {
+      setTgLoading(false);
+    }
+  };
+
+  const handleTestTelegramNotification = async () => {
+    setTgLoading(true);
+    setTgError('');
+    setTgSuccess('');
+    try {
+      await apiCall('telegram.test', {});
+      setTgSuccess('ส่งข้อความทดสอบไปยัง Telegram ของคุณเรียบร้อยแล้ว กรุณาเปิดดูในแอป Telegram');
+    } catch (err) {
+      setTgError(err.message || 'ส่งข้อความทดสอบไม่สำเร็จ');
+    } finally {
+      setTgLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (user?.email) {
@@ -278,6 +358,141 @@ export default function UserProfile() {
                 </button>
               </div>
             </form>
+          </div>
+
+          {/* TELEGRAM NOTIFICATION CARD */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-sky-50 text-sky-600 rounded-xl">
+                  <Send className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-slate-800">
+                    การแจ้งเตือนผ่าน Telegram (Individual Notification)
+                  </h2>
+                  <p className="text-xs text-slate-400">
+                    รับการแจ้งเตือนมอบหมายงานและสถานะใบงานตรงเข้าสู่ Telegram ส่วนบุคคล
+                  </p>
+                </div>
+              </div>
+
+              {tgStatus?.is_bound && (
+                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" />
+                  <span>เชื่อมต่อแล้ว</span>
+                </span>
+              )}
+            </div>
+
+            {tgSuccess && (
+              <div className="p-3 bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs rounded-xl flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                <span>{tgSuccess}</span>
+              </div>
+            )}
+
+            {tgError && (
+              <div className="p-3 bg-rose-50 text-rose-800 border border-rose-200 text-xs rounded-xl flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                <span>{tgError}</span>
+              </div>
+            )}
+
+            {tgStatus?.is_bound ? (
+              <div className="space-y-4 text-xs">
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">Telegram Chat ID:</span>
+                    <span className="font-mono font-bold text-slate-800">{tgStatus.telegram_chat_id}</span>
+                  </div>
+                  {tgStatus.telegram_username && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Username:</span>
+                      <span className="font-mono text-blue-600">@{tgStatus.telegram_username}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">สถานะการรับแจ้งเตือน:</span>
+                    <span className="font-semibold text-emerald-600">เปิดใช้งาน (Active)</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2 justify-end">
+                  <button
+                    type="button"
+                    onClick={handleTestTelegramNotification}
+                    disabled={tgLoading}
+                    className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold flex items-center gap-1.5 transition-colors shadow-2xs disabled:opacity-50"
+                  >
+                    {tgLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5 text-amber-400" />}
+                    <span>ทดสอบส่งการแจ้งเตือน</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleUnbindTelegram}
+                    disabled={tgLoading}
+                    className="px-3.5 py-2 border border-rose-200 hover:bg-rose-50 text-rose-600 rounded-xl font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                  >
+                    <Unlink className="w-3.5 h-3.5" />
+                    <span>ยกเลิกการเชื่อมต่อ</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4 text-xs">
+                <p className="text-slate-600 leading-relaxed">
+                  เชื่อมต่อบัญชีนี้กับ Telegram เพื่อรับการแจ้งเตือนเมื่อได้รับมอบหมายงานใหม่, งานถูกส่งกลับแก้ไข (Rework), หรือเมื่อช่างส่งมอบงานเสร็จสมบูรณ์
+                </p>
+
+                {inMiniApp && currentTgUser?.id ? (
+                  <div className="p-4 bg-sky-50 rounded-xl border border-sky-200 space-y-3">
+                    <p className="font-semibold text-sky-900">
+                      ตรวจพบบัญชี Telegram ของคุณ: {currentTgUser.first_name || currentTgUser.username} (ID: {currentTgUser.id})
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => handleBindTelegram(String(currentTgUser.id))}
+                      disabled={tgLoading}
+                      className="w-full bg-sky-600 hover:bg-sky-700 text-white py-2.5 rounded-xl font-semibold shadow-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                    >
+                      {tgLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      <span>ผูกกับบัญชี Telegram นี้ทันที</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">
+                        ระบุ Telegram Chat ID
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="เช่น 123456789"
+                          value={manualChatId}
+                          onChange={(e) => setManualChatId(e.target.value)}
+                          className="flex-1 px-3 py-2 rounded-xl border border-slate-300 font-mono focus:border-blue-500 outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleBindTelegram()}
+                          disabled={tgLoading}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-semibold shadow-xs flex items-center gap-1.5 transition-colors disabled:opacity-50 shrink-0"
+                        >
+                          {tgLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                          <span>เชื่อมต่อ</span>
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      * สามารถดู Chat ID ของตนเองได้โดยเปิดแชทกับบ็อต หรือพิมพ์คำสั่ง /start กับบ็อตใน Telegram
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

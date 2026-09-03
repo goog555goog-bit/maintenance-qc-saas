@@ -33,6 +33,13 @@ function handleRequest(e) {
     // Security: Check for malicious payloads and sanitize
     const sanitizedRequest = Security.sanitizePayload(request);
     
+    // Telegram Webhook Detection: updates from Telegram contain update_id or message
+    if (sanitizedRequest.update_id || sanitizedRequest.message || sanitizedRequest.callback_query) {
+      const webhookResult = TelegramService.handleWebhook(sanitizedRequest);
+      return ContentService.createTextOutput(JSON.stringify(webhookResult))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     const action = sanitizedRequest.action;
     const payload = sanitizedRequest.payload || {};
     const token = sanitizedRequest.token;

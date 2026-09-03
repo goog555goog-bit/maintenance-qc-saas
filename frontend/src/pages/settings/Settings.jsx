@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Settings as SettingsIcon, Database, Inbox, Loader2, Users, Briefcase, Plus, Trash2, Tag, Globe, Link2, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Save, Settings as SettingsIcon, Database, Inbox, Loader2, Users, Briefcase, Plus, Trash2, Tag, Globe, Link2, CheckCircle2, AlertCircle, RefreshCw, Send, Copy, Check, ExternalLink, Bot } from 'lucide-react';
 import { apiCall, getGasUrl, setGasUrl } from '@/core/api';
 
 export default function Settings() {
@@ -38,6 +38,81 @@ export default function Settings() {
   const [gasEndpoint, setGasEndpoint] = useState(getGasUrl());
   const [testStatus, setTestStatus] = useState(null);
   const [testMessage, setTestMessage] = useState('');
+
+  // Telegram Config state
+  const [tgToken, setTgToken] = useState('');
+  const [tgMiniAppUrl, setTgMiniAppUrl] = useState('https://maintenance-qc-saas.goog555goog.workers.dev');
+  const [tgBotInfo, setTgBotInfo] = useState(null);
+  const [tgHasToken, setTgHasToken] = useState(false);
+  const [tgConfigLoading, setTgConfigLoading] = useState(false);
+  const [tgWebhookResult, setTgWebhookResult] = useState('');
+  const [tgWebhookLoading, setTgWebhookLoading] = useState(false);
+  const [tgCopied, setTgCopied] = useState(false);
+
+  const fetchTgConfig = async () => {
+    setTgConfigLoading(true);
+    try {
+      const res = await apiCall('telegram.config.get', {});
+      if (res) {
+        setTgHasToken(res.has_token || false);
+        setTgMiniAppUrl(res.mini_app_url || 'https://maintenance-qc-saas.goog555goog.workers.dev');
+        if (res.bot_info && res.bot_info.ok) {
+          setTgBotInfo(res.bot_info.result);
+        } else {
+          setTgBotInfo(null);
+        }
+      }
+    } catch (e) {
+      console.warn('Could not fetch telegram config:', e);
+    } finally {
+      setTgConfigLoading(false);
+    }
+  };
+
+  const handleSaveTgConfig = async (e) => {
+    e.preventDefault();
+    setTgConfigLoading(true);
+    setError(null);
+    try {
+      await apiCall('telegram.config.save', {
+        bot_token: tgToken.trim() || undefined,
+        mini_app_url: tgMiniAppUrl.trim()
+      });
+      setSuccessMessage('บันทึกการตั้งค่า Telegram Bot เรียบร้อยแล้ว');
+      setTimeout(() => setSuccessMessage(''), 4000);
+      setTgToken('');
+      fetchTgConfig();
+    } catch (err) {
+      setError(err.message || 'บันทึกการตั้งค่า Telegram ไม่สำเร็จ');
+    } finally {
+      setTgConfigLoading(false);
+    }
+  };
+
+  const handleSetTelegramWebhook = async () => {
+    const webhookUrl = (gasEndpoint || '').trim();
+    if (!webhookUrl) {
+      setError('กรุณาระบุ Google Apps Script Web App URL ก่อนติดตั้ง Webhook');
+      return;
+    }
+    setTgWebhookLoading(true);
+    setTgWebhookResult('');
+    setError(null);
+    try {
+      const res = await apiCall('telegram.set_webhook', { webhook_url: webhookUrl });
+      if (res?.api_response?.ok) {
+        setSuccessMessage('ติดตั้ง Webhook ไปยัง Telegram สำเร็จเรียบร้อย! บ็อตจะเริ่มรับคำสั่ง /start ได้ทันที');
+        setTgWebhookResult('Webhook เชื่อมต่อแล้ว: ' + webhookUrl);
+      } else {
+        throw new Error(res?.api_response?.description || 'Telegram ปฏิเสธการติดตั้ง Webhook');
+      }
+      setTimeout(() => setSuccessMessage(''), 5000);
+    } catch (err) {
+      setError(err.message || 'ติดตั้ง Webhook ไม่สำเร็จ');
+    } finally {
+      setTgWebhookLoading(false);
+    }
+  };
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -278,6 +353,13 @@ export default function Settings() {
           >
             <Globe className="w-4 h-4" />
             <span>การเชื่อมต่อ Google Apps Script</span>
+          </button>
+          <button 
+            onClick={() => { setActiveTab('telegram'); fetchTgConfig(); }} 
+            className={`p-4 text-left text-sm font-medium border-b border-slate-200 flex items-center gap-2 ${activeTab === 'telegram' ? 'bg-white text-blue-600 border-l-4 border-l-blue-600' : 'text-slate-600 hover:bg-slate-100'}`}
+          >
+            <Send className="w-4 h-4 text-sky-600" />
+            <span>Telegram Bot & Mini App</span>
           </button>
         </div>
 
@@ -619,6 +701,157 @@ export default function Settings() {
                   <li>เลือก <strong>เวอร์ชัน (Version): "เวอร์ชันใหม่" (New version)</strong></li>
                   <li>ตรวจสอบว่า <strong>ผู้มีสิทธิ์เข้าถึง (Who has access) = "ทุกคน" (Anyone)</strong></li>
                   <li>กด <strong>"ทำให้ใช้งานได้" (Deploy)</strong> แล้วคัดลอก <strong>URL ของเว็บแอป (Web App URL)</strong> มาวางในช่องด้านบน</li>
+                </ol>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 5: TELEGRAM BOT & MINI APP */}
+          {activeTab === 'telegram' && (
+            <div className="flex-1 flex flex-col space-y-6">
+              <div>
+                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <Send className="w-5 h-5 text-sky-600" />
+                  <span>การตั้งค่า Telegram Bot และ Telegram Mini App (TMA)</span>
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  เชื่อมต่อ Telegram Bot API เพื่อรองรับการเปิดใช้งาน Mini App และส่งการแจ้งเตือนงานซ่อมตรงถึงบุคคล
+                </p>
+              </div>
+
+              {/* Bot Status Banner */}
+              <div className={`p-4 rounded-2xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                tgHasToken && tgBotInfo ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-slate-50 border-slate-200 text-slate-700'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <div className={`p-2.5 rounded-xl ${tgHasToken && tgBotInfo ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
+                    <Bot className="w-5 h-5" />
+                  </div>
+                  <div>
+                    {tgHasToken && tgBotInfo ? (
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-sm text-emerald-900">{tgBotInfo.first_name}</span>
+                          <span className="font-mono text-xs text-emerald-700">(@{tgBotInfo.username})</span>
+                          <span className="bg-emerald-200 text-emerald-800 text-[10px] font-bold px-2 py-0.2 rounded-full">ออนไลน์</span>
+                        </div>
+                        <p className="text-[11px] text-emerald-700 mt-0.5">
+                          เชื่อมต่อ Telegram Bot API สำเร็จ พร้อมส่งการแจ้งเตือนและรับคำสั่ง Webhook
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <span className="font-bold text-sm text-slate-800">ยังไม่ได้ระบุ Telegram Bot Token</span>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          สร้างบ็อตกับ @BotFather แล้วนำ Token มากรอกด้านล่างเพื่อเปิดใช้งานระบบแจ้งเตือน
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={fetchTgConfig}
+                  disabled={tgConfigLoading}
+                  className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-slate-700 font-semibold text-xs hover:bg-slate-50 transition-colors shadow-2xs flex items-center gap-1.5 self-start sm:self-center"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${tgConfigLoading ? 'animate-spin' : ''}`} />
+                  <span>ตรวจสอบสถานะ Bot</span>
+                </button>
+              </div>
+
+              {/* Bot Token Configuration Form */}
+              <form onSubmit={handleSaveTgConfig} className="space-y-4 max-w-2xl bg-slate-50/70 p-5 rounded-2xl border border-slate-200">
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  กำหนดค่าการเชื่อมต่อ (Bot Credentials)
+                </h3>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Telegram Bot Token (จาก @BotFather) *
+                  </label>
+                  <input
+                    type="password"
+                    placeholder={tgHasToken ? 'มี Token ในระบบแล้ว (กรอกใหม่หากต้องการเปลี่ยน)' : 'เช่น 7123456789:AAH...'}
+                    value={tgToken}
+                    onChange={(e) => setTgToken(e.target.value)}
+                    className="w-full px-3 py-2.5 text-xs font-mono border border-slate-300 rounded-xl outline-none focus:border-blue-500 bg-white"
+                  />
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Token จะถูกเก็บอย่างปลอดภัยใน Google Apps Script และตาราง System_Config
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    URL ของระบบ Mini App (Web App URL)
+                  </label>
+                  <input
+                    type="url"
+                    required
+                    value={tgMiniAppUrl}
+                    onChange={(e) => setTgMiniAppUrl(e.target.value)}
+                    className="w-full px-3 py-2.5 text-xs font-mono border border-slate-300 rounded-xl outline-none focus:border-blue-500 bg-white"
+                  />
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    URL ของหน้าเว็บที่จะถูกเปิดเมื่อผู้ใช้กดปุ่มเมนูด้านล่างของแชท หรือกดดูใบงาน
+                  </p>
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={tgConfigLoading}
+                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-xs transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {tgConfigLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    <span>บันทึกการตั้งค่า Bot</span>
+                  </button>
+                </div>
+              </form>
+
+              {/* Webhook Installation Card */}
+              <div className="max-w-2xl bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-sky-600" />
+                    <span>การติดตั้ง Webhook สำหรับรับคำสั่ง /start อัตโนมัติ</span>
+                  </h3>
+                </div>
+
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  เมื่อติดตั้ง Webhook นี้ หากผู้ใช้ใหม่กดปุ่ม <strong>Start (/start)</strong> ใน Telegram ระบบจะตรวจจับและสั่งเปลี่ยนปุ่มล่างเป็นปุ่ม <strong>"เปิดระบบซ่อมบำรุง"</strong> ให้ทันที
+                </p>
+
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs font-mono text-slate-700 break-all">
+                  {gasEndpoint || 'กรุณากำหนด Web App URL ในแท็บการเชื่อมต่อ Google Apps Script'}
+                </div>
+
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={handleSetTelegramWebhook}
+                    disabled={tgWebhookLoading || !tgHasToken}
+                    className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-2xs transition-colors flex items-center gap-2 disabled:opacity-40"
+                  >
+                    {tgWebhookLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5 text-blue-400" />}
+                    <span>ติดตั้ง Webhook ไปยัง Telegram (1-Click)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Guide Card */}
+              <div className="bg-sky-50/60 border border-sky-200 rounded-2xl p-5 space-y-3 max-w-2xl text-xs text-slate-700">
+                <h3 className="font-bold text-sky-900 flex items-center gap-1.5">
+                  <ExternalLink className="w-4 h-4 text-sky-600" />
+                  <span>วิธีสร้าง Telegram Bot และ Mini App (ใช้เวลา 2 นาที):</span>
+                </h3>
+                <ol className="list-decimal pl-5 space-y-1.5 leading-relaxed text-slate-600">
+                  <li>เปิดแอป Telegram ค้นหา <strong>@BotFather</strong> แล้วพิมพ์ <code>/newbot</code> เพื่อสร้างบ็อต</li>
+                  <li>คัดลอก <strong>HTTP API Token</strong> ที่ได้ มาวางในช่องด้านบนแล้วกด <strong>"บันทึกการตั้งค่า Bot"</strong></li>
+                  <li>กดปุ่ม <strong>"ติดตั้ง Webhook ไปยัง Telegram"</strong> ด้านบน</li>
+                  <li>ในแชท @BotFather พิมพ์ <code>/newapp</code> เพื่อผูก Mini App ใส่ URL: <code>{tgMiniAppUrl}</code></li>
                 </ol>
               </div>
             </div>

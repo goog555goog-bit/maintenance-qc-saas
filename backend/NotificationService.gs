@@ -46,7 +46,111 @@ const NotificationService = {
       read: 'FALSE',
       created_at: new Date().toISOString()
     });
+
+    // Send Telegram Personal Notification
+    try {
+      this.sendTelegramNotification(ticketId, eventStr, eventThai, targetUserId, extraDetail);
+    } catch (tgErr) {
+      console.warn("Could not dispatch Telegram notification: " + tgErr.message);
+    }
   },
+
+  sendTelegramNotification: function(ticketId, eventStr, eventThai, targetUserId, extraDetail) {
+    const db = Database.getInstance();
+    const chatIdsToSend = new Set();
+
+    // 1. Direct target user
+    if (targetUserId && targetUserId !== 'SYSTEM_BROADCAST') {
+      const users = db.query('Users', { user_id: targetUserId });
+      if (users.length > 0 && users[0].telegram_chat_id) {
+        chatIdsToSend.add(String(users[0].telegram_chat_id).trim());
+      }
+      const tgUsers = db.query('Telegram_Users', { user_id: targetUserId });
+      if (tgUsers.length > 0 && tgUsers[0].telegram_chat_id) {
+        chatIdsToSend.add(String(tgUsers[0].telegram_chat_id).trim());
+      }
+    }
+
+    // 2. Resolve target based on ticket role and workflow state
+    if (ticketId) {
+      const tickets = db.query('Tickets', { ticket_id: ticketId });
+      if (tickets.length > 0) {
+        const ticket = tickets[0];
+
+        // If ticket assigned or reworked: notify assigned technicians
+        if (eventStr === 'ASSIGNED' || eventStr === 'REWORK' || eventStr === 'REJECTED_REWORK') {
+          const assignments = db.query('Work_Assignments', { ticket_id: ticketId });
+          const activeAsn = assignments.find(function(a) { return a.assignment_status === 'ACTIVE'; }) || assignments[0];
+          if (activeAsn) {
+            // Check direct technician_id
+            if (activeAsn.technician_id) {
+              const techUsers = db.query('Users', { user_id: activeAsn.technician_id });
+              if (techUsers.length > 0 && techUsers[0].telegram_chat_id) {
+                chatIdsToSend.add(String(techUsers[0].telegram_chat_id).trim());
+              }
+            }
+            // Check team members
+            if (activeAsn.team_id) {
+              const histories = db.query('User_Assignment_History', { team_id: activeAsn.team_id });
+              histories.forEach(function(h) {
+                if (h.user_id) {
+                  const u = db.query('Users', { user_id: h.user_id });
+                  if (u.length > 0 && u[0].telegram_chat_id) {
+                    chatIdsToSend.add(String(u[0].telegram_chat_id).trim());
+                  }
+                }
+              });
+            }
+          }
+        }
+
+        // If completed or checked-in: notify Branch Manager
+        if (eventStr === 'COMPLETED_BY_TECH' || eventStr === 'CHECKED_IN' || eventStr === 'WAITING_REVIEW') {
+          if (ticket.created_by) {
+            const creator = db.query('Users', { user_id: ticket.created_by });
+            if (creator.length > 0 && creator[0].telegram_chat_id) {
+              chatIdsToSend.add(String(creator[0].telegram_chat_id).trim());
+            }
+          }
+          if (ticket.branch_id) {
+            const managers = db.query('Users', { role: 'BRANCH_MANAGER', branch_id: ticket.branch_id });
+            managers.forEach(function(m) {
+              if (m.telegram_chat_id) {
+                chatIdsToSend.add(String(m.telegram_chat_id).trim());
+              }
+            });
+          }
+        }
+      }
+    }
+
+    // 3. Dispatch to all resolved chat IDs
+    if (chatIdsToSend.size === 0) return;
+
+    const miniAppUrl = TelegramService.getMiniAppUrl();
+    const ticketUrl = miniAppUrl + '/tickets/' + ticketId;
+
+    let text = '<b>แจ้งเตือนงานซ่อมบำรุง</b>\n\n';
+    text += 'ใบงาน: <code>' + ticketId + '</code>\n';
+    text += 'สถานะ: <b>' + eventThai + '</b>\n';
+    if (extraDetail) {
+      text += 'รายละเอียด: ' + extraDetail + '\n';
+    }
+    text += 'เวลา: ' + new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.\n';
+
+    const replyMarkup = {
+      inline_keyboard: [
+        [
+          { text: 'เปิดดูใบงานในระบบ', web_app: { url: ticketUrl } }
+        ]
+      ]
+    };
+
+    chatIdsToSend.forEach(function(chatId) {
+      if (chatId) {
+        TelegramService.sendMessage(chatId, text, replyMarkup);
+      }
+    });
 
   listNotifications: function(payload, userContext) {
     const db = Database.getInstance();

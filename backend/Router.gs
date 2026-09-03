@@ -331,6 +331,62 @@ const Router = {
       case 'ticket.spare_parts.save':
         return SparePartService.saveTicketSpareParts(payload, userContext);
 
+      // ---- Telegram & Mini App ----
+      case 'telegram.bind':
+        return TelegramService.bindUserTelegram(payload, userContext);
+      case 'telegram.unbind':
+        return TelegramService.unbindUserTelegram(payload, userContext);
+      case 'telegram.status':
+        return TelegramService.getUserTelegramStatus(payload, userContext);
+      case 'telegram.test': {
+        const userStatus = TelegramService.getUserTelegramStatus(payload, userContext);
+        if (!userStatus.telegram_chat_id) {
+          throw new Error("ผู้ใช้นี้ยังไม่ได้เชื่อมต่อกับ Telegram");
+        }
+        const testText = '<b>ทดสอบการแจ้งเตือน Telegram สำเร็จ</b>\n\nระบบบริหารงานซ่อมบำรุงสามารถส่งข้อความตรงถึงท่านได้เรียบร้อยแล้ว\nเวลาทดสอบ: ' + new Date().toLocaleTimeString('th-TH') + ' น.';
+        const testRes = TelegramService.sendMessage(userStatus.telegram_chat_id, testText, {
+          inline_keyboard: [[{ text: 'เปิดระบบซ่อมบำรุง', web_app: { url: TelegramService.getMiniAppUrl() } }]]
+        });
+        return { success: true, api_response: testRes };
+      }
+      case 'telegram.config.get': {
+        const token = TelegramService.getBotToken();
+        let botInfo = null;
+        if (token) {
+          botInfo = TelegramService.getMe();
+        }
+        return {
+          has_token: Boolean(token),
+          masked_token: token ? (token.slice(0, 6) + '...' + token.slice(-4)) : '',
+          mini_app_url: TelegramService.getMiniAppUrl(),
+          bot_info: botInfo
+        };
+      }
+      case 'telegram.config.save': {
+        if (payload.bot_token !== undefined) {
+          TelegramService.setBotToken(payload.bot_token, userContext);
+        }
+        if (payload.mini_app_url) {
+          const db = Database.getInstance();
+          const cleanUrl = String(payload.mini_app_url).trim();
+          const existing = db.query('System_Config', { key: 'MINI_APP_URL' });
+          if (existing.length > 0) {
+            db.update('System_Config', 'key', 'MINI_APP_URL', { value: cleanUrl, updated_at: new Date().toISOString() });
+          } else {
+            db.insert('System_Config', { key: 'MINI_APP_URL', value: cleanUrl, updated_at: new Date().toISOString() });
+          }
+        }
+        return { success: true };
+      }
+      case 'telegram.set_webhook': {
+        if (userContext.role !== 'CENTRAL_ADMIN') {
+          throw new Error("Only Admin can set webhook");
+        }
+        Validation.requireFields(payload, ['webhook_url']);
+        const res = TelegramService.setWebhook(payload.webhook_url);
+        return { success: true, api_response: res };
+      }
+
       // ---- Reports / Archive ----
       case 'report.summary':
         return TicketService.getReportSummary(payload, userContext);
