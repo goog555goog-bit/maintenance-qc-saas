@@ -95,16 +95,20 @@ const SparePartService = {
     
     // Clear old items for this ticket
     try {
-      const sheet = db.getSheet('Ticket_Spare_Parts');
-      if (sheet) {
-        const data = sheet.getDataRange().getValues();
-        if (data.length > 1) {
-          const headers = data[0];
-          const ticketCol = headers.indexOf('ticket_id');
-          if (ticketCol !== -1) {
-            for (let i = data.length - 1; i >= 1; i--) {
-              if (String(data[i][ticketCol]).trim() === String(payload.ticket_id).trim()) {
-                sheet.deleteRow(i + 1);
+      if (typeof db.delete === 'function') {
+        db.delete('Ticket_Spare_Parts', 'ticket_id', payload.ticket_id);
+      } else if (typeof db.getSheet === 'function') {
+        const sheet = db.getSheet('Ticket_Spare_Parts');
+        if (sheet) {
+          const data = sheet.getDataRange().getValues();
+          if (data.length > 1) {
+            const headers = data[0];
+            const ticketCol = headers.indexOf('ticket_id');
+            if (ticketCol !== -1) {
+              for (let i = data.length - 1; i >= 1; i--) {
+                if (String(data[i][ticketCol]).trim() === String(payload.ticket_id).trim()) {
+                  sheet.deleteRow(i + 1);
+                }
               }
             }
           }
@@ -115,12 +119,14 @@ const SparePartService = {
     }
     
     // Insert new items
+    let totalAmount = 0;
     if (Array.isArray(payload.items)) {
       payload.items.forEach(function(item) {
         if (item.part_name || item.name) {
           const qty = Number(item.qty || item.quantity) || 1;
           const unitPrice = Number(item.unit_price || item.unitPrice) || 0;
           const total = Number(item.total) || (qty * unitPrice);
+          totalAmount += total;
           
           db.insert('Ticket_Spare_Parts', {
             usage_id: 'USG-' + Utilities.getUuid().slice(0, 8).toUpperCase(),
@@ -141,6 +147,6 @@ const SparePartService = {
     }
     
     AuditService.logActivity(userContext.user_id, userContext.role, 'SAVE_TICKET_PARTS', 'Ticket', payload.ticket_id, null, payload.items.length, 'บันทึกรายการอะไหล่ที่ใช้ในใบงาน');
-    return { success: true };
+    return { success: true, total_amount: totalAmount };
   }
 };
