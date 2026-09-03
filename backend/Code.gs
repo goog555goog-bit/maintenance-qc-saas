@@ -59,3 +59,13 @@ function handleRequest(e) {
     return Utils.errorResponse(error ? (error.message || String(error)) : "Internal Server Error", 500);
   }
 }
+
+/**
+ * Run this function once in Google Apps Script editor to trigger authorization dialog.
+ */
+function authorizeScript() {
+  UrlFetchApp.fetch('https://httpbin.org/get');
+  SpreadsheetApp.getActiveSpreadsheet();
+  DriveApp.getRootFolder();
+  console.log('Authorization successful!');
+}
