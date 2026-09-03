@@ -114,6 +114,29 @@ export default function Settings() {
     }
   };
 
+  const [tgMenuLoading, setTgMenuLoading] = useState(false);
+
+  const handleSetMenuButton = async () => {
+    setTgMenuLoading(true);
+    setError(null);
+    try {
+      const res = await apiCall('telegram.set_menu_button', {
+        mini_app_url: tgMiniAppUrl.trim(),
+        text: 'Open'
+      });
+      if (res?.api_response?.ok) {
+        setSuccessMessage('เปิดใช้งานปุ่ม [Open] บน Telegram สำเร็จเรียบร้อย! ปุ่มจะปรากฏในหน้ารายชื่อแชทและแถบล่างของบ็อตทันที');
+        setTimeout(() => setSuccessMessage(''), 5000);
+      } else {
+        throw new Error(res?.api_response?.description || 'Telegram ปฏิเสธการตั้งค่าปุ่ม');
+      }
+    } catch (err) {
+      setError(err.message || 'ตั้งค่าปุ่มเมนูไม่สำเร็จ');
+    } finally {
+      setTgMenuLoading(false);
+    }
+  };
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
@@ -850,6 +873,32 @@ export default function Settings() {
                   >
                     {tgWebhookLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5 text-blue-400" />}
                     <span>ติดตั้ง Webhook ไปยัง Telegram (1-Click)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Menu Button Setup Card */}
+              <div className="max-w-2xl bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                    <Send className="w-4 h-4 text-emerald-600" />
+                    <span>เปิดใช้งานปุ่ม [Open] บนหน้ารายชื่อแชท Telegram</span>
+                  </h3>
+                </div>
+
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  สั่งให้ Telegram แสดงปุ่ม <strong>[ Open ]</strong> สีขาวที่หน้ารายชื่อแชท และตั้งค่าปุ่มเมนูแถบล่างของบ็อตให้เปิด Mini App ได้ทันทีสำหรับผู้ใช้ทุกคน
+                </p>
+
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={handleSetMenuButton}
+                    disabled={tgMenuLoading || !tgHasToken}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-xs transition-colors flex items-center gap-2 disabled:opacity-40"
+                  >
+                    {tgMenuLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                    <span>เปิดใช้งานปุ่ม [Open] ทันที (1-Click)</span>
                   </button>
                 </div>
               </div>

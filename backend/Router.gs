@@ -384,6 +384,19 @@ const Router = {
         }
         Validation.requireFields(payload, ['webhook_url']);
         const res = TelegramService.setWebhook(payload.webhook_url);
+        // Automatically set global default menu button for all users
+        try {
+          TelegramService.setChatMenuButton(null, TelegramService.getMiniAppUrl(), 'Open');
+        } catch (e) {}
+        return { success: true, api_response: res };
+      }
+      case 'telegram.set_menu_button': {
+        if (userContext.role !== 'CENTRAL_ADMIN') {
+          throw new Error("Only Admin can set menu button");
+        }
+        const text = payload.text || 'Open';
+        const url = payload.mini_app_url || TelegramService.getMiniAppUrl();
+        const res = TelegramService.setChatMenuButton(null, url, text);
         return { success: true, api_response: res };
       }
 
