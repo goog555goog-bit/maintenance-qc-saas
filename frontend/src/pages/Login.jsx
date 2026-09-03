@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { apiCall } from '@/core/api';
 import { useAuth } from '@/core/auth';
+import { isTelegramWebApp, getTelegramUser } from '@/core/telegram';
 
 export default function Login({ setRole }) {
   const navigate = useNavigate();
@@ -64,6 +65,23 @@ export default function Login({ setRole }) {
 
         if (setRole) setRole(normalizedRole);
         if (login) login(result.user, result.token, remember);
+
+        // Auto-bind Telegram user if logging in inside Telegram Mini App
+        try {
+          if (isTelegramWebApp()) {
+            const tgUser = getTelegramUser();
+            if (tgUser && tgUser.id) {
+              apiCall('telegram.bind', {
+                telegram_chat_id: String(tgUser.id),
+                username: tgUser.username || '',
+                first_name: tgUser.first_name || '',
+                last_name: tgUser.last_name || ''
+              }, result.token).catch(function(err) {
+                console.warn('Auto-bind telegram on login error:', err);
+              });
+            }
+          }
+        } catch (ignore) {}
 
         navigate(`/dashboard/${normalizedRole}`);
       } else {

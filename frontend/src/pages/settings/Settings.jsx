@@ -510,6 +510,7 @@ export default function Settings() {
                       <th className="p-3">ชื่อ-นามสกุล</th>
                       <th className="p-3">อีเมล</th>
                       <th className="p-3">บทบาท (Role)</th>
+                      <th className="p-3">Telegram แจ้งเตือน</th>
                       <th className="p-3 text-right">จัดการ</th>
                     </tr>
                   </thead>
@@ -529,6 +530,18 @@ export default function Settings() {
                               {u.role === 'CENTRAL_ADMIN' ? 'ผู้ดูแลระบบส่วนกลาง' :
                                u.role === 'BRANCH_MANAGER' ? 'ผู้จัดการสาขา' : 'ช่างเทคนิค'}
                             </span>
+                          </td>
+                          <td className="p-3">
+                            {u.telegram_chat_id ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                <span>ผูกแล้ว ({u.telegram_chat_id})</span>
+                              </span>
+                            ) : (
+                              <span className="text-[11px] text-slate-400 font-medium italic">
+                                รอเข้าสู่ระบบครั้งแรก
+                              </span>
+                            )}
                           </td>
                           <td className="p-3 text-right">
                             <button 
