@@ -74,9 +74,12 @@ const TelegramService = {
     return this.callApi('getMe', {});
   },
 
-  setWebhook: function(webhookUrl) {
+  setWebhook: function(webhookUrl, dropPendingUpdates = true) {
     const cleanUrl = String(webhookUrl || '').trim();
-    return this.callApi('setWebhook', { url: cleanUrl });
+    return this.callApi('setWebhook', { 
+      url: cleanUrl,
+      drop_pending_updates: Boolean(dropPendingUpdates)
+    });
   },
 
   setChatMenuButton: function(chatId, webAppUrl, buttonText) {
@@ -109,15 +112,42 @@ const TelegramService = {
   },
 
   handleWebhook: function(update) {
-    if (!update) return { status: 'NO_UPDATE' };
+    if (!update) return { ok: true, status: 'NO_UPDATE' };
+
+    // 1. Deduplicate by update_id to prevent Telegram retry spam
+    const updateId = String(update.update_id || '').trim();
+    if (updateId) {
+      try {
+        const cache = CacheService.getScriptCache();
+        if (cache.get('tg_upd_' + updateId)) {
+          return { ok: true, status: 'DUPLICATE_IGNORED' };
+        }
+        cache.put('tg_upd_' + updateId, '1', 600);
+      } catch (cacheErr) {
+        console.warn('Cache check error:', cacheErr);
+      }
+    }
+
     const message = update.message;
-    if (!message) return { status: 'NO_MESSAGE' };
+    if (!message) return { ok: true, status: 'NO_MESSAGE' };
 
     const chatId = message.chat ? message.chat.id : null;
     const fromUser = message.from || {};
     const text = String(message.text || '').trim();
 
-    if (!chatId) return { status: 'NO_CHAT_ID' };
+    if (!chatId) return { ok: true, status: 'NO_CHAT_ID' };
+
+    // 2. Rate-limit welcome messages to same user (max 1 per 60 seconds)
+    if (text.indexOf('/start') === 0) {
+      try {
+        const cache = CacheService.getScriptCache();
+        const welcomeKey = 'tg_welc_' + chatId;
+        if (cache.get(welcomeKey)) {
+          return { ok: true, status: 'WELCOME_RATE_LIMITED' };
+        }
+        cache.put(welcomeKey, '1', 60);
+      } catch (e) {}
+    }
 
     const db = Database.getInstance();
     const now = new Date().toISOString();
@@ -193,7 +223,7 @@ const TelegramService = {
       this.sendMessage(chatId, welcomeMsg, replyMarkup);
     }
 
-    return { status: 'SUCCESS', chat_id: chatId };
+    return { ok: true, status: 'SUCCESS', chat_id: chatId };
   },
 
   bindUserTelegram: function(payload, userContext) {
