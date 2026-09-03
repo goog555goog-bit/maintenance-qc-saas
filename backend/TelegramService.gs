@@ -161,14 +161,16 @@ const TelegramService = {
         text: welcomeMsg,
         parse_mode: 'HTML',
         reply_markup: {
-          inline_keyboard: [
+          keyboard: [
             [
               {
-                text: 'เปิดระบบซ่อมบำรุง (Open App)',
+                text: 'Open App',
                 web_app: { url: miniAppUrl }
               }
             ]
-          ]
+          ],
+          resize_keyboard: true,
+          is_persistent: true
         }
       };
     }
@@ -225,9 +227,11 @@ const TelegramService = {
         cache.put(boundMsgKey, '1', 86400); // 24 hours lock
         const confirmText = '<b>เชื่อมต่อบัญชีสำเร็จ</b>\n\nบัญชีผู้ใช้ <code>' + userId + '</code> ได้รับการผูกเข้ากับ Telegram นี้เรียบร้อยแล้ว ท่านจะได้รับการแจ้งเตือนงานซ่อมและสถานะใบงานผ่านช่องทางนี้โดยตรง';
         this.sendMessage(chatId, confirmText, {
-          inline_keyboard: [
-            [{ text: 'เข้าสู่ระบบ (Open App)', web_app: { url: this.getMiniAppUrl() } }]
-          ]
+          keyboard: [
+            [{ text: 'Open App', web_app: { url: this.getMiniAppUrl() } }]
+          ],
+          resize_keyboard: true,
+          is_persistent: true
         });
       }
     }
