@@ -95,6 +95,15 @@ const Database = (function() {
           if (headers.length === 0) {
             headers = Object.keys(obj);
             sheet.appendRow(headers);
+          } else {
+            // Auto-append any new columns if not present in headers
+            for (const key in obj) {
+              if (headers.indexOf(key) === -1) {
+                const newColIndex = headers.length + 1;
+                sheet.getRange(1, newColIndex).setValue(key);
+                headers.push(key);
+              }
+            }
           }
 
           const row = headers.map(h => (obj[h] !== undefined ? obj[h] : ""));
@@ -123,10 +132,15 @@ const Database = (function() {
             if (String(data[i][keyIndex]).trim().toUpperCase() === String(keyValue).trim().toUpperCase()) {
               const rowNum = i + 1;
               for (const key in updateObj) {
-                const colIndex = headers.indexOf(key);
-                if (colIndex !== -1) {
-                  sheet.getRange(rowNum, colIndex + 1).setValue(updateObj[key]);
+                let colIndex = headers.indexOf(key);
+                if (colIndex === -1) {
+                  // Auto-append missing column header
+                  const newCol = headers.length + 1;
+                  sheet.getRange(1, newCol).setValue(key);
+                  headers.push(key);
+                  colIndex = headers.length - 1;
                 }
+                sheet.getRange(rowNum, colIndex + 1).setValue(updateObj[key]);
               }
               updated = true;
               break;
