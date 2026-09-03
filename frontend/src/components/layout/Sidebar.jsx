@@ -14,11 +14,12 @@ import {
   Settings, 
   User, 
   LogOut,
-  ShieldCheck
+  ShieldCheck,
+  X
 } from 'lucide-react';
 import { useAuth } from '@/core/auth';
 
-export default function Sidebar({ currentRole = 'tech' }) {
+export default function Sidebar({ currentRole = 'tech', onClose }) {
   const location = useLocation();
   const { logout, user } = useAuth() || {};
 
@@ -66,9 +67,9 @@ export default function Sidebar({ currentRole = 'tech' }) {
   const roleInfo = roleLabels[role] || roleLabels.tech;
 
   return (
-    <aside className="w-60 bg-white border-r border-slate-200/90 flex flex-col select-none shrink-0">
+    <aside className="w-full h-full md:w-60 bg-white border-r border-slate-200/90 flex flex-col select-none shrink-0">
       {/* Brand Header */}
-      <div className="h-14 px-4 flex items-center justify-between border-b border-slate-200/80">
+      <div className="h-14 px-4 flex items-center justify-between border-b border-slate-200/80 shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded bg-slate-900 text-white flex items-center justify-center font-bold text-xs shadow-sm">
             <ShieldCheck className="w-4 h-4 text-blue-400" />
@@ -78,7 +79,18 @@ export default function Sidebar({ currentRole = 'tech' }) {
             <div className="text-[10px] text-slate-500 font-mono leading-tight">ระบบบริหารงานซ่อม</div>
           </div>
         </div>
-        <span className="w-2 h-2 rounded-full bg-emerald-500 ring-4 ring-emerald-500/10" title="System Online" />
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 ring-4 ring-emerald-500/10" title="System Online" />
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg md:hidden transition-colors"
+              title="ปิดเมนู"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Navigation Links */}
@@ -94,6 +106,7 @@ export default function Sidebar({ currentRole = 'tech' }) {
             <Link
               key={item.label + item.path}
               to={item.path}
+              onClick={() => { if (onClose) onClose(); }}
               className={`flex items-center justify-between px-2.5 py-1.5 rounded text-xs font-medium transition-colors ${
                 isActive
                   ? 'bg-slate-900 text-white shadow-sm'

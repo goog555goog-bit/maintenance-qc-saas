@@ -1,9 +1,9 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Search, Bell, Shield, User } from 'lucide-react';
+import { Search, Bell, Shield, User, Menu } from 'lucide-react';
 import { useAuth } from '@/core/auth';
 
-export default function Topbar() {
+export default function Topbar({ onToggleSidebar }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth() || {};
@@ -42,12 +42,23 @@ export default function Topbar() {
   const currentTitle = getPageTitle(location.pathname);
 
   return (
-    <header className="h-14 border-b border-slate-200/90 bg-white flex items-center justify-between px-6 shrink-0 select-none">
-      {/* Breadcrumb / Location context */}
-      <div className="flex items-center gap-2 text-xs">
-        <span className="text-slate-400 font-medium">ระบบงานซ่อม</span>
-        <span className="text-slate-300">/</span>
-        <span className="text-slate-800 font-semibold">{currentTitle}</span>
+    <header className="h-14 border-b border-slate-200/90 bg-white flex items-center justify-between px-3 sm:px-6 shrink-0 select-none">
+      {/* Left: Mobile Hamburger + Breadcrumb */}
+      <div className="flex items-center gap-2 min-w-0 mr-2">
+        <button
+          type="button"
+          onClick={onToggleSidebar}
+          className="p-2 -ml-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg md:hidden shrink-0 transition-colors"
+          title="เปิดเมนูหลัก"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        <div className="flex items-center gap-1.5 text-xs truncate">
+          <span className="text-slate-400 font-medium hidden sm:inline shrink-0">ระบบงานซ่อม</span>
+          <span className="text-slate-300 hidden sm:inline shrink-0">/</span>
+          <span className="text-slate-800 font-semibold truncate">{currentTitle}</span>
+        </div>
       </div>
 
       {/* Action Center */}
