@@ -117,7 +117,7 @@ export default function TechDashboard() {
           </div>
 
           {/* Filter Pills */}
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none max-w-full">
             {[
               { key: 'all', label: `ทั้งหมด (${tickets.length})` },
               { key: 'urgent', label: `แก้ไขด่วน (${metrics.urgentRework})` },

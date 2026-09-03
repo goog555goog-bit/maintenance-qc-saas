@@ -350,7 +350,7 @@ export default function TicketDetail({ role: propRole }) {
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-bold text-slate-800 font-mono">ใบแจ้งซ่อม {id}</h1>
               {currentStatus && (
                 <span className={`px-2.5 py-0.5 rounded-md text-xs font-bold border ${currentStatus.color}`}>
@@ -540,8 +540,8 @@ export default function TicketDetail({ role: propRole }) {
               </div>
 
               {currentParts.length > 0 ? (
-                <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
-                  <table className="w-full text-left border-collapse text-xs">
+                <div className="border border-slate-200 rounded-2xl overflow-x-auto shadow-2xs">
+                  <table className="w-full text-left border-collapse text-xs min-w-[500px]">
                     <thead>
                       <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
                         <th className="py-3 px-4 w-12 text-center">ลำดับ</th>
