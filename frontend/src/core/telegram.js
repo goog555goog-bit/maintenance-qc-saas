@@ -28,19 +28,27 @@ export function initTelegramApp() {
   if (!tg) return;
 
   try {
-    tg.ready();
-    tg.expand();
+    if (typeof tg.ready === 'function') {
+      tg.ready();
+    }
+    if (typeof tg.expand === 'function') {
+      tg.expand();
+    }
+
+    const isAtLeast = (ver) => {
+      return typeof tg.isVersionAtLeast === 'function' ? tg.isVersionAtLeast(ver) : false;
+    };
     
-    // Set header color to match app slate theme
-    if (tg.setHeaderColor) {
+    // Set header color to match app slate theme (Bot API 6.1+)
+    if (isAtLeast('6.1') && typeof tg.setHeaderColor === 'function') {
       tg.setHeaderColor('#0f172a');
     }
-    if (tg.setBackgroundColor) {
+    if (isAtLeast('6.1') && typeof tg.setBackgroundColor === 'function') {
       tg.setBackgroundColor('#f8fafc');
     }
 
-    // Enable closing confirmation to prevent accidental swipes
-    if (tg.enableClosingConfirmation) {
+    // Enable closing confirmation to prevent accidental swipes (Bot API 6.2+)
+    if (isAtLeast('6.2') && typeof tg.enableClosingConfirmation === 'function') {
       tg.enableClosingConfirmation();
     }
   } catch (err) {
