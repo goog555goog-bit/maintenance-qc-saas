@@ -67,7 +67,7 @@ export async function autoBindTelegramIfInMiniApp() {
 
   try {
     const boundKey = 'tg_bound_' + tgUser.id;
-    if (sessionStorage.getItem(boundKey)) return;
+    if (localStorage.getItem(boundKey)) return;
 
     await apiCall('telegram.bind', {
       telegram_chat_id: String(tgUser.id),
@@ -76,7 +76,7 @@ export async function autoBindTelegramIfInMiniApp() {
       last_name: tgUser.last_name || ''
     });
 
-    sessionStorage.setItem(boundKey, 'true');
+    localStorage.setItem(boundKey, 'true');
   } catch (e) {
     console.warn('Auto-bind telegram skipped or error:', e.message);
   }

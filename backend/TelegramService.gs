@@ -236,6 +236,10 @@ const TelegramService = {
     const db = Database.getInstance();
     const now = new Date().toISOString();
 
+    // Check if already bound to avoid sending duplicate confirmation messages
+    const userList = db.query('Users', { user_id: userId });
+    const isAlreadyBound = userList.length > 0 && String(userList[0].telegram_chat_id || '').trim() === chatId;
+
     // Update Users table
     db.update('Users', 'user_id', userId, { telegram_chat_id: chatId });
 
@@ -263,15 +267,22 @@ const TelegramService = {
     // Set menu button for this user
     this.setChatMenuButton(chatId, this.getMiniAppUrl(), 'เปิดระบบซ่อมบำรุง');
 
-    // Send confirmation message to user's Telegram
-    const confirmText = '<b>เชื่อมต่อบัญชีสำเร็จ</b>\n\nบัญชีผู้ใช้ <code>' + userId + '</code> ได้รับการผูกเข้ากับ Telegram นี้เรียบร้อยแล้ว ท่านจะได้รับการแจ้งเตือนงานซ่อมและสถานะใบงานผ่านช่องทางนี้โดยตรง';
-    this.sendMessage(chatId, confirmText, {
-      inline_keyboard: [
-        [{ text: 'เข้าสู่ระบบ (Open App)', web_app: { url: this.getMiniAppUrl() } }]
-      ]
-    });
+    // Send confirmation message ONLY ONCE when newly bound
+    if (!isAlreadyBound) {
+      const cache = CacheService.getScriptCache();
+      const boundMsgKey = 'tg_bind_sent_' + userId + '_' + chatId;
+      if (!cache.get(boundMsgKey)) {
+        cache.put(boundMsgKey, '1', 86400); // 24 hours lock
+        const confirmText = '<b>เชื่อมต่อบัญชีสำเร็จ</b>\n\nบัญชีผู้ใช้ <code>' + userId + '</code> ได้รับการผูกเข้ากับ Telegram นี้เรียบร้อยแล้ว ท่านจะได้รับการแจ้งเตือนงานซ่อมและสถานะใบงานผ่านช่องทางนี้โดยตรง';
+        this.sendMessage(chatId, confirmText, {
+          inline_keyboard: [
+            [{ text: 'เข้าสู่ระบบ (Open App)', web_app: { url: this.getMiniAppUrl() } }]
+          ]
+        });
+      }
+    }
 
-    return { success: true, telegram_chat_id: chatId };
+    return { success: true, telegram_chat_id: chatId, already_bound: isAlreadyBound };
   },
 
   unbindUserTelegram: function(payload, userContext) {
