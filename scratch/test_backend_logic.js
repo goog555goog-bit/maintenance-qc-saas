@@ -431,11 +431,8 @@ test('TelegramService: Ultra-fast Webhook Reply verification', () => {
   };
 
   const res1 = TelegramService.handleWebhook(update);
-  if (res1.method !== 'sendMessage' || !res1.reply_markup || !res1.reply_markup.keyboard) {
+  if (res1.method !== 'sendMessage' || !res1.reply_markup || !res1.reply_markup.inline_keyboard) {
     throw new Error('Telegram webhook response invalid: ' + JSON.stringify(res1));
-  }
-  if (!res1.reply_markup.is_persistent) {
-    throw new Error('Reply markup is not persistent');
   }
 
   // Deduplication check
