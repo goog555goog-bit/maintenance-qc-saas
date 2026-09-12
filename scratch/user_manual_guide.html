@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>คู่มือการใช้งานระบบบริหารงานซ่อมบำรุงและควบคุมคุณภาพ (Maintenance QC SaaS)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  @page {
+    size: A4;
+    margin: 16mm 14mm 16mm 14mm;
+    @bottom-right {
+      content: counter(page);
+    }
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #1e293b;
+    background-color: #ffffff;
+    font-size: 13.5px;
+    line-height: 1.65;
+    word-break: break-word;
+  }
+
+  h1, h2, h3, h4, .font-heading {
+    font-family: 'Prompt', sans-serif;
+    color: #0f172a;
+    font-weight: 600;
+  }
+
+  .page-break {
+    page-break-before: always;
+  }
+
+  .avoid-break {
+    page-break-inside: avoid;
+  }
+
+  /* Cover Header */
+  .cover {
+    border-bottom: 2px solid #2563eb;
+    padding-bottom: 24px;
+    margin-bottom: 28px;
+  }
+
+  .badge-tag {
+    display: inline-block;
+    background-color: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+
+  .cover h1 {
+    font-size: 26px;
+    line-height: 1.3;
+    margin-bottom: 8px;
+    color: #0f172a;
+  }
+
+  .cover-subtitle {
+    font-size: 15px;
+    color: #475569;
+    margin-bottom: 16px;
+  }
+
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 12px;
+  }
+
+  .meta-item strong {
+    color: #64748b;
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+  }
+
+  .meta-item span {
+    color: #0f172a;
+    font-weight: 600;
+  }
+
+  /* Typography */
+  h2 {
+    font-size: 18px;
+    margin-top: 24px;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #e2e8f0;
+    color: #1e3a8a;
+  }
+
+  h3 {
+    font-size: 15px;
+    margin-top: 16px;
+    margin-bottom: 8px;
+    color: #1e293b;
+  }
+
+  p {
+    margin-bottom: 10px;
+    color: #334155;
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0 20px 0;
+    font-size: 12.5px;
+  }
+
+  th, td {
+    padding: 9px 12px;
+    text-align: left;
+    border: 1px solid #e2e8f0;
+  }
+
+  th {
+    background-color: #f1f5f9;
+    color: #1e293b;
+    font-weight: 600;
+    font-family: 'Prompt', sans-serif;
+  }
+
+  tr:nth-child(even) td {
+    background-color: #f8fafc;
+  }
+
+  /* Cards & Callouts */
+  .callout {
+    background-color: #f8fafc;
+    border-left: 4px solid #2563eb;
+    border-radius: 4px 8px 8px 4px;
+    padding: 12px 16px;
+    margin: 14px 0;
+    font-size: 12.5px;
+  }
+
+  .callout-success {
+    background-color: #f0fdf4;
+    border-left-color: #16a34a;
+  }
+
+  .callout-warning {
+    background-color: #fffbeb;
+    border-left-color: #d97706;
+  }
+
+  /* Flow Steps */
+  .step-list {
+    margin: 12px 0;
+    padding-left: 0;
+    list-style: none;
+  }
+
+  .step-item {
+    position: relative;
+    padding-left: 36px;
+    margin-bottom: 12px;
+  }
+
+  .step-number {
+    position: absolute;
+    left: 0;
+    top: 2px;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background-color: #2563eb;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .step-title {
+    font-weight: 600;
+    color: #0f172a;
+    margin-bottom: 3px;
+  }
+
+  .step-desc {
+    color: #475569;
+    font-size: 12.5px;
+  }
+
+  /* Flow Diagram Container */
+  .diagram-container {
+    background-color: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 16px 0;
+    text-align: center;
+  }
+
+  .diagram-svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    background-color: #f1f5f9;
+    color: #0f172a;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .role-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .role-admin { background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+  .role-manager { background-color: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+  .role-tech { background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+
+  /* Footer */
+  .footer {
+    margin-top: 30px;
+    padding-top: 14px;
+    border-top: 1px solid #e2e8f0;
+    font-size: 11px;
+    color: #94a3b8;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+  <!-- COVER / HEADER -->
+  <div class="cover">
+    <span class="badge-tag">ENTERPRISE SAAS DOCUMENTATION</span>
+    <h1>คู่มือการใช้งานระบบบริหารงานซ่อมบำรุงและควบคุมคุณภาพ</h1>
+    <div class="cover-subtitle">Maintenance QC SaaS & Telegram Mini App User Manual (Official Release)</div>
+    
+    <div class="meta-grid">
+      <div class="meta-item">
+        <strong>สถานะระบบ</strong>
+        <span>Production Ready (v1.0)</span>
+      </div>
+      <div class="meta-item">
+        <strong>กลุ่มผู้ใช้งาน</strong>
+        <span>Manager / Technician / Admin</span>
+      </div>
+      <div class="meta-item">
+        <strong>วันที่ปรับปรุงล่าสุด</strong>
+        <span>กันยายน 2569</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 1: OVERVIEW -->
+  <h2>1. บทนำและภาพรวมระบบ (System Overview)</h2>
+  <p>
+    ระบบ <strong>Maintenance QC SaaS</strong> เป็นแพลตฟอร์มบริหารงานซ่อมบำรุงเชิงรุกและควบคุมคุณภาพมาตรฐานงานช่างระดับองค์กร เชื่อมโยงการทำงานแบบเรียลไทม์ระหว่างสาขา ทีมช่างเทคนิคภาคสนาม และผู้บริหารส่วนกลาง ช่วยลดขั้นตอนเอกสาร ควบคุมต้นทุนค่าน้ำมันและอะไหล่ พร้อมบันทึกพิกัดดาวเทียม (GPS) อย่างโปร่งใสและแม่นยำ
+  </p>
+
+  <!-- WORKFLOW DIAGRAM SVG -->
+  <div class="diagram-container avoid-break">
+    <svg class="diagram-svg" viewBox="0 0 740 180" xmlns="http://www.w3.org/2000/svg">
+      <!-- Step 1 -->
+      <rect x="10" y="40" width="130" height="90" rx="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+      <text x="75" y="70" font-family="Prompt" font-size="12" font-weight="bold" fill="#1e3a8a" text-anchor="middle">1. ผู้จัดการสาขา</text>
+      <text x="75" y="90" font-family="Sarabun" font-size="11" fill="#475569" text-anchor="middle">สร้างใบแจ้งซ่อม</text>
+      <text x="75" y="108" font-family="Sarabun" font-size="10" fill="#64748b" text-anchor="middle">(ระบุจุดซ่อมหลายจุด)</text>
+
+      <!-- Arrow 1 -> 2 -->
+      <path d="M 140 85 L 175 85" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+
+      <!-- Step 2 -->
+      <rect x="180" y="40" width="130" height="90" rx="8" fill="#f8fafc" stroke="#64748b" stroke-width="2"/>
+      <text x="245" y="70" font-family="Prompt" font-size="12" font-weight="bold" fill="#0f172a" text-anchor="middle">2. ผู้ดูแลระบบ</text>
+      <text x="245" y="90" font-family="Sarabun" font-size="11" fill="#475569" text-anchor="middle">จัดสรรและมอบหมาย</text>
+      <text x="245" y="108" font-family="Sarabun" font-size="10" fill="#64748b" text-anchor="middle">(เลือกทีมช่างผู้รับผิดชอบ)</text>
+
+      <!-- Arrow 2 -> 3 -->
+      <path d="M 310 85 L 345 85" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+
+      <!-- Step 3 -->
+      <rect x="350" y="40" width="135" height="90" rx="8" fill="#f0fdf4" stroke="#22c55e" stroke-width="2"/>
+      <text x="417" y="70" font-family="Prompt" font-size="12" font-weight="bold" fill="#14532d" text-anchor="middle">3. ช่างเทคนิค</text>
+      <text x="417" y="88" font-family="Sarabun" font-size="11" fill="#475569" text-anchor="middle">Telegram Check-in</text>
+      <text x="417" y="104" font-family="Sarabun" font-size="10" fill="#64748b" text-anchor="middle">คำนวณระยะทาง GPS</text>
+      <text x="417" y="118" font-family="Sarabun" font-size="10" fill="#64748b" text-anchor="middle">เบิกอะไหล่ + ส่งมอบงาน</text>
+
+      <!-- Arrow 3 -> 4 -->
+      <path d="M 485 85 L 520 85" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+
+      <!-- Step 4 -->
+      <rect x="525" y="40" width="130" height="90" rx="8" fill="#faf5ff" stroke="#a855f7" stroke-width="2"/>
+      <text x="590" y="70" font-family="Prompt" font-size="12" font-weight="bold" fill="#581c87" text-anchor="middle">4. ตรวจรับ QC</text>
+      <text x="590" y="90" font-family="Sarabun" font-size="11" fill="#475569" text-anchor="middle">Approve หรือ Rework</text>
+      <text x="590" y="108" font-family="Sarabun" font-size="10" fill="#64748b" text-anchor="middle">ประเมิน 1-5 ดาว & ปิดงาน</text>
+
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 1 L 8 5 L 0 9 z" fill="#94a3b8" />
+        </marker>
+      </defs>
+    </svg>
+  </div>
+
+  <!-- SECTION 2: CREDENTIALS -->
+  <h2>2. บัญชีผู้ใช้งานเริ่มต้น (Default Credentials)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">บทบาท (Role)</th>
+        <th style="width: 20%;">รหัสผู้ใช้ (Username)</th>
+        <th style="width: 20%;">รหัสผ่านเริ่มต้น</th>
+        <th style="width: 35%;">ขอบเขตการเข้าถึงและหน้าที่</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="role-badge role-admin">CENTRAL_ADMIN</span></td>
+        <td><code>EMP-0001</code></td>
+        <td><code>EMP-0001</code></td>
+        <td>ศูนย์บัญชาการผู้บริหาร, จัดสรรทีมช่าง, กำหนดค่าน้ำมัน, ตั้งค่าระบบ</td>
+      </tr>
+      <tr>
+        <td><span class="role-badge role-manager">BRANCH_MANAGER</span></td>
+        <td><code>EMP-0002</code></td>
+        <td><code>EMP-0002</code></td>
+        <td>สร้างใบแจ้งซ่อม, ตรวจรับงาน QC (Approve/Rework), ให้คะแนนและปิดงาน</td>
+      </tr>
+      <tr>
+        <td><span class="role-badge role-tech">TECHNICIAN</span></td>
+        <td><code>EMP-0003</code></td>
+        <td><code>EMP-0003</code></td>
+        <td>ปฏิบัติงานผ่าน Telegram, เช็คอินพิกัด GPS, บันทึกอะไหล่, ส่งมอบงาน</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SECTION 3: BRANCH MANAGER MANUAL -->
+  <div class="page-break"></div>
+  <h2>3. คู่มือสำหรับผู้จัดการสาขา (Branch Manager Manual)</h2>
+
+  <h3>3.1 การสร้างใบแจ้งซ่อมใหม่ (New Ticket Creation)</h3>
+  <div class="step-list avoid-break">
+    <div class="step-item">
+      <div class="step-number">1</div>
+      <div class="step-title">เข้าสู่ระบบและกดสร้างใบงาน</div>
+      <div class="step-desc">ล็อกอินด้วยรหัสผู้จัดการสาขา แล้วคลิกที่ปุ่ม <strong>"+ สร้างใบแจ้งซ่อม"</strong> บนแถบเมนูหลัก</div>
+    </div>
+    <div class="step-item">
+      <div class="step-number">2</div>
+      <div class="step-title">กรอกข้อมูลภาพรวมของงาน</div>
+      <div class="step-desc">
+        เลือก <strong>สาขา</strong>, กำหนด <strong>ระดับความเร่งด่วน</strong> (ปกติ / ด่วน / ฉุกเฉิน) และระบุคำอธิบายอาการชำรุด เช่น <em>"แอร์ห้องเซิร์ฟเวอร์น้ำหยดและไม่เย็น"</em>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-number">3</div>
+      <div class="step-title">เพิ่มรายการจุดชำรุด (Multi-location Items)</div>
+      <div class="step-desc">
+        กดปุ่ม <strong>"+ เพิ่มจุดซ่อม"</strong> เพื่อระบุจุดที่ช่างต้องเข้าซ่อม เช่น <em>จุดที่ 1 แอร์ตัวขวา, จุดที่ 2 แอร์ตัวกลาง</em> พร้อมแนบรูปถ่าย (ถ้ามี)
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-number">4</div>
+      <div class="step-title">ยืนยันการเปิดใบงาน</div>
+      <div class="step-desc">กดปุ่ม <strong>"ยืนยันการสร้างใบแจ้งซ่อม"</strong> ระบบจะสร้างรหัสใบงานอัตโนมัติ (เช่น <code>MT-2026-0001</code>) และส่งเข้าสู่คิวงานส่วนกลางทันที</div>
+    </div>
+  </div>
+
+  <h3>3.2 การตรวจรับงานซ่อมและควบคุมคุณภาพ (QC Review & Rework)</h3>
+  <p>
+    เมื่อช่างเทคนิคส่งมอบงาน ระบบจะส่งแจ้งเตือนมายังผู้จัดการสาขา ผู้จัดการต้องเปิดดูรายละเอียดเพื่อตรวจสอบ:
+  </p>
+  <ul>
+    <li>เวลาที่ช่างเดินทางถึงสาขาจริง (พิกัด GPS Check-in)</li>
+    <li>ระยะทางช่วงเดินทางและค่าน้ำมัน</li>
+    <li>รายการอะไหล่ที่ช่างเบิกใช้จริง</li>
+    <li>บันทึกการทำงานของช่าง (Technician Note)</li>
+  </ul>
+
+  <div class="callout callout-warning avoid-break">
+    <strong>กรณีตรวจพบข้อบกพร่อง (Rework):</strong><br/>
+    กดปุ่มสีแดง <strong>"ส่งกลับแก้ไข (Reject / Rework)"</strong> แล้วพิมพ์ระบุสิ่งที่ต้องการให้แก้ไขอย่างชัดเจน ใบงานจะถูกส่งกลับเข้าคิวของช่างพร้อมแจ้งเตือนทันที
+  </div>
+
+  <div class="callout callout-success avoid-break">
+    <strong>กรณีงานเรียบร้อยถูกต้อง (Approve & Close):</strong><br/>
+    กดปุ่มสีเขียว <strong>"ตรวจรับงานผ่าน (Approve)"</strong> จากนั้นกดปุ่มสีม่วง <strong>"ปิดใบงานและประเมินความพึงพอใจ"</strong> ให้คะแนน 1 - 5 ดาว และกดยืนยันปิดใบงานสมบูรณ์
+  </div>
+
+  <!-- SECTION 4: TECHNICIAN MANUAL -->
+  <div class="page-break"></div>
+  <h2>4. คู่มือสำหรับช่างเทคนิคผ่าน Telegram (Field Technician Manual)</h2>
+  <p>
+    ช่างเทคนิคสามารถปฏิบัติงานภาคสนามผ่านสมาร์ตโฟนได้ 100% ผ่าน <strong>Telegram Mini App</strong> โดยไม่ต้องติดตั้งแอปพลิเคชันอื่นเพิ่มเติม
+  </p>
+
+  <h3>4.1 การเข้าใช้งานและรับงาน</h3>
+  <div class="step-list avoid-break">
+    <div class="step-item">
+      <div class="step-number">1</div>
+      <div class="step-title">เปิดแอปผ่าน Telegram</div>
+      <div class="step-desc">
+        ในห้องแชทของ <code>@Maintenance_QC_Bot</code> แตะที่ปุ่มสีฟ้า <strong>[ เปิดระบบซ่อมบำรุง ]</strong> ที่มุมล่างซ้าย หรือกดปุ่ม <strong>[ Open ]</strong> ในข้อความแจ้งเตือนงานใหม่
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-number">2</div>
+      <div class="step-title">ลงชื่อเข้าพื้นที่ด้วยพิกัดดาวเทียม (GPS Check-in)</div>
+      <div class="step-desc">
+        เมื่อเดินทางถึงสาขา ให้กดปุ่ม <strong>"ลงชื่อเข้าพื้นที่ (GPS Check-in)"</strong> แล้วกดยืนยันการแชร์ตำแหน่ง ระบบจะบันทึกพิกัดและคำนวณระยะทางช่วงเดินทางจากจุดก่อนหน้า (Hop-by-Hop) อัตโนมัติ สถานะใบงานจะเปลี่ยนเป็น <code>กำลังดำเนินการ (In Progress)</code>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-number">3</div>
+      <div class="step-title">บันทึกรายการอะไหล่ที่เบิกใช้จริง</div>
+      <div class="step-desc">
+        กดปุ่ม <strong>"บันทึกการเบิกใช้อะไหล่"</strong> เลือกรายการอะไหล่จากฐานข้อมูลและระบุจำนวนที่ใช้จริง ระบบจะคำนวณราคารวมสุทธิให้ทันที
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-number">4</div>
+      <div class="step-title">ส่งมอบงานซ่อม (Submit Work)</div>
+      <div class="step-desc">
+        เมื่อเสร็จสิ้นการซ่อม ให้กดปุ่ม <strong>"ส่งมอบงาน (Submit Work)"</strong> พิมพ์สรุปการซ่อมแซม แล้วกดยืนยัน ระบบจะส่งการแจ้งเตือนไปยังผู้จัดการสาขาเพื่อรอการตรวจรับงาน
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 5: ADMIN MANUAL -->
+  <h2>5. คู่มือสำหรับผู้ดูแลระบบและผู้บริหาร (Central Admin Manual)</h2>
+  <p>
+    ผู้ดูแลระบบส่วนกลางสามารถควบคุมการทำงานทั้งระบบผ่าน <strong>Executive Command Center</strong>:
+  </p>
+  <ul>
+    <li><strong>การจัดสรรทีมช่าง:</strong> เปิดใบงานในสถานะ <code>รอจัดสรร (Waiting Assignment)</code> แล้วกดปุ่ม <strong>"มอบหมายทีมช่าง"</strong> เพื่อเลือกทีมที่รับผิดชอบ</li>
+    <li><strong>การควบคุมค่าน้ำมัน (Fuel Control):</strong> เข้าเมนู <strong>"ค่าน้ำมัน (Fuel)"</strong> เพื่อกำหนดอัตราค่าน้ำมันกลางต่อกิโลเมตร และตรวจสอบอนุมัติ/ปฏิเสธคำขอปรับค่าน้ำมันของช่าง</li>
+    <li><strong>รายงานภาพรวม (KPI Analytics):</strong> ติดตามสถิติ First-time Pass Rate (%), ระยะเวลาเฉลี่ยในการปิดงาน (MTTR), และยอดเบิกจ่ายสะสมแยกตามสาขาและทีมช่าง</li>
+  </ul>
+
+  <!-- SECTION 6: FAQ -->
+  <div class="page-break"></div>
+  <h2>6. คำถามที่พบบ่อยและการแก้ไขปัญหา (FAQ & Troubleshooting)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 40%;">ปัญหาที่อาจพบ</th>
+        <th style="width: 60%;">วิธีแก้ไขและคำแนะนำ</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>ช่างกดเช็คอิน GPS แล้วระบบแจ้งว่าไม่อนุญาต?</strong></td>
+        <td>ตรวจสอบว่าได้เปิด Location Service บนโทรศัพท์มือถือแล้ว และในหน้าต่างเบราว์เซอร์ของ Telegram ให้กดเลือก <em>"อนุญาต (Allow)"</em> ให้เข้าถึงพิกัด</td>
+      </tr>
+      <tr>
+        <td><strong>ต้องการให้พนักงานใหม่รับการแจ้งเตือนใน Telegram?</strong></td>
+        <td>ให้พนักงานเปิดแอป Telegram ค้นหาบ็อต <code>@Maintenance_QC_Bot</code> แล้วกดเปิดแอปผ่านปุ่ม <em>[ เปิดระบบซ่อมบำรุง ]</em> ระบบจะผูกบัญชี Telegram เข้ากับรหัสพนักงานให้อัตโนมัติ</td>
+      </tr>
+      <tr>
+        <td><strong>ผู้จัดการตรวจพบงานไม่เรียบร้อย ต้องการให้แก้ไข?</strong></td>
+        <td>ในหน้าตรวจรับงาน ให้กดปุ่มสีแดง <em>"ส่งกลับแก้ไข (Rework)"</em> พร้อมระบุข้อความสิ่งที่ต้องแก้ไข งานจะเด้งกลับไปที่คิวงานของช่างทันที</td>
+      </tr>
+      <tr>
+        <td><strong>ต้องการเปลี่ยนรหัสผ่านส่วนตัว?</strong></td>
+        <td>คลิกที่ชื่อผู้ใช้ที่มุมขวาบน เลือกเมนู <em>"ข้อมูลส่วนตัว (Profile)"</em> จะมีฟอร์มสำหรับกำหนดรหัสผ่านใหม่ได้อย่างปลอดภัย</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    ระบบบริหารงานซ่อมบำรุงและควบคุมคุณภาพ (Maintenance QC SaaS) — พัฒนาเพื่อการใช้งานระดับองค์กรอย่างมีเสถียรภาพและปลอดภัย
+  </div>
+
+</body>
+</html>
