@@ -47,12 +47,32 @@ export function initTelegramApp() {
       tg.setBackgroundColor('#f8fafc');
     }
 
+    // Request fullscreen on supported Telegram clients (Bot API 8.0+)
+    if (typeof tg.requestFullscreen === 'function') {
+      try {
+        tg.requestFullscreen();
+      } catch (e) {}
+    }
+
     // Enable closing confirmation to prevent accidental swipes (Bot API 6.2+)
     if (isAtLeast('6.2') && typeof tg.enableClosingConfirmation === 'function') {
       tg.enableClosingConfirmation();
     }
   } catch (err) {
     console.warn('Telegram WebApp init error:', err);
+  }
+}
+
+/**
+ * Open the application in external browser (e.g. Chrome / Edge) from Telegram Mini App
+ */
+export function openInExternalBrowser(url) {
+  const tg = getTelegramWebApp();
+  const targetUrl = url || window.location.href;
+  if (tg && typeof tg.openLink === 'function') {
+    tg.openLink(targetUrl);
+  } else {
+    window.open(targetUrl, '_blank');
   }
 }
 

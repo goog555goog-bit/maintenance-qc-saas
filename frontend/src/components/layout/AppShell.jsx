@@ -34,7 +34,7 @@ export default function AppShell({ children, currentRole = 'tech' }) {
           <OfflineBanner />
           <Topbar onToggleSidebar={() => setMobileMenuOpen(prev => !prev)} />
         </div>
-        <main className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8 print:p-0 print:m-0 print:overflow-visible print:h-auto print:block">
+        <main className="flex-1 overflow-auto p-3 sm:p-6 lg:p-8 print:p-0 print:m-0 print:overflow-visible print:h-auto print:block">
           {children}
         </main>
       </div>

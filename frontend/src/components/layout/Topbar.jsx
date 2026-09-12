@@ -1,7 +1,8 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Search, Bell, Shield, User, Menu } from 'lucide-react';
+import { Search, Bell, Shield, User, Menu, Maximize2, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/core/auth';
+import { isTelegramWebApp, openInExternalBrowser } from '@/core/telegram';
 
 export default function Topbar({ onToggleSidebar }) {
   const location = useLocation();
@@ -62,7 +63,35 @@ export default function Topbar({ onToggleSidebar }) {
       </div>
 
       {/* Action Center */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Open in Browser / Fullscreen Button (Especially useful for Telegram Desktop) */}
+        <button
+          onClick={() => {
+            const tg = window.Telegram?.WebApp;
+            if (tg && typeof tg.requestFullscreen === 'function') {
+              try { tg.requestFullscreen(); } catch (e) {}
+            }
+            if (isTelegramWebApp()) {
+              openInExternalBrowser();
+            } else if (!document.fullscreenElement) {
+              document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+              document.exitFullscreen().catch(() => {});
+            }
+          }}
+          className="p-2 text-slate-500 hover:text-blue-600 rounded-lg hover:bg-slate-100 transition-colors"
+          title={isTelegramWebApp() ? "เปิดในเบราว์เซอร์ปกติ (Chrome/Edge)" : "ขยายเต็มจอ"}
+        >
+          {isTelegramWebApp() ? (
+            <span className="flex items-center gap-1 text-xs text-blue-600 font-medium">
+              <ExternalLink className="w-4 h-4" />
+              <span className="hidden md:inline text-[11px]">เปิดในเบราว์เซอร์</span>
+            </span>
+          ) : (
+            <Maximize2 className="w-4 h-4" />
+          )}
+        </button>
+
         {/* Notifications Button */}
         <button
           onClick={() => navigate('/notifications')}
