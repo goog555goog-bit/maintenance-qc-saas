@@ -69,12 +69,15 @@ const TicketService = {
   },
 
   updateTicketStatus: function(ticketId, currentStatus, newStatus, userContext) {
-    Validation.validateStateTransition(currentStatus, newStatus);
     const db = Database.getInstance();
     
     const tickets = db.query('Tickets', { ticket_id: ticketId });
     if (tickets.length === 0) throw new Error("Ticket not found");
     const ticket = tickets[0];
+
+    // Validate using actual database status to prevent race conditions and stale overwrites
+    const activeCurrentStatus = ticket.status || currentStatus;
+    Validation.validateStateTransition(activeCurrentStatus, newStatus);
     
     const newVersion = (parseInt(ticket.version) || 1) + 1;
     
@@ -83,7 +86,7 @@ const TicketService = {
       version: newVersion
     });
     
-    AuditService.logActivity(userContext.user_id, userContext.role, 'UPDATE_STATUS', 'Ticket', ticketId, currentStatus, newStatus, 'Status updated: ' + newStatus);
+    AuditService.logActivity(userContext.user_id, userContext.role, 'UPDATE_STATUS', 'Ticket', ticketId, activeCurrentStatus, newStatus, 'Status updated: ' + newStatus);
     try {
       NotificationService.notify(ticketId, newStatus);
     } catch (e) {
@@ -204,11 +207,13 @@ const TicketService = {
     this.updateTicketStatus(ticket.ticket_id, ticket.status, 'CLOSED', userContext);
 
     if (payload.satisfaction_score !== undefined) {
+      const rawScore = parseInt(payload.satisfaction_score) || 5;
+      const cleanScore = Math.min(5, Math.max(1, rawScore));
       db.insert('Satisfaction_Scores', {
         satisfaction_id: Utils.generateId('SAT'),
         ticket_id: ticket.ticket_id,
         reviewer_id: userContext.user_id,
-        score: payload.satisfaction_score,
+        score: cleanScore,
         comment: Security.sanitizeString(payload.comment || ''),
         created_at: new Date().toISOString()
       });

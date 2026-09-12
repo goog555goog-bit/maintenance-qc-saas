@@ -30,6 +30,13 @@ const Validation = {
     if (!currentState || !newState) return;
     if (currentState === newState) return; // Idempotent
     
+    if (currentState === 'CLOSED' && newState !== 'REOPENED' && newState !== 'ARCHIVED') {
+      throw new Error("ใบงานถูกปิดสมบูรณ์แล้ว ไม่สามารถเปลี่ยนสถานะได้");
+    }
+    if (currentState === 'ARCHIVED') {
+      throw new Error("ใบงานถูกเก็บถาวรแล้ว ไม่สามารถเปลี่ยนสถานะได้");
+    }
+
     if (validTransitions[currentState] && validTransitions[currentState].indexOf(newState) === -1) {
       console.warn("Non-standard state transition from " + currentState + " to " + newState);
     }

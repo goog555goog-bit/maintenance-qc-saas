@@ -123,8 +123,8 @@ const SparePartService = {
     if (Array.isArray(payload.items)) {
       payload.items.forEach(function(item) {
         if (item.part_name || item.name) {
-          const qty = Number(item.qty || item.quantity) || 1;
-          const unitPrice = Number(item.unit_price || item.unitPrice) || 0;
+          const qty = Math.max(1, Math.abs(Number(item.qty || item.quantity) || 1));
+          const unitPrice = Math.max(0, Math.abs(Number(item.unit_price || item.unitPrice) || 0));
           const total = Number(item.total) || (qty * unitPrice);
           totalAmount += total;
           
