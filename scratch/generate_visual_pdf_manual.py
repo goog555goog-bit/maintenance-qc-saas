@@ -1,4 +1,8 @@
-<!DOCTYPE html>
+import os
+import subprocess
+import shutil
+
+html_content = """<!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -764,3 +768,37 @@
 
 </body>
 </html>
+"""
+
+html_path = os.path.abspath('scratch/user_manual_guide.html')
+pdf_path = os.path.abspath('user_manual_guide.pdf')
+artifact_pdf_path = r'C:\Users\User\.gemini\antigravity\brain\22ab63f3-d4ec-4fe5-8e08-bf497091bfe8\user_manual_guide.pdf'
+
+with open(html_path, 'w', encoding='utf-8') as f:
+    f.write(html_content)
+
+chrome = r'C:\Program Files\Google\Chrome\Application\chrome.exe'
+if not os.path.exists(chrome):
+    chrome = r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
+
+print("Compiling Visual Illustrated PDF with Chrome headless...")
+cmd = [
+    chrome,
+    '--headless=new',
+    '--disable-gpu',
+    '--no-sandbox',
+    '--run-all-compositor-stages-before-draw',
+    f'--print-to-pdf={pdf_path}',
+    html_path
+]
+
+res = subprocess.run(cmd, capture_output=True, text=True)
+print("Return code:", res.returncode)
+
+if os.path.exists(pdf_path):
+    size = os.path.getsize(pdf_path)
+    print(f"Visual Illustrated PDF generated successfully at {pdf_path} (Size: {size:,} bytes)")
+    shutil.copy2(pdf_path, artifact_pdf_path)
+    print(f"Copied to artifact: {artifact_pdf_path}")
+else:
+    print("PDF generation failed:", res.stderr)
