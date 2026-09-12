@@ -4,7 +4,7 @@ import { Search, Bell, Shield, User, Menu, Maximize2, ExternalLink } from 'lucid
 import { useAuth } from '@/core/auth';
 import { isTelegramWebApp, openInExternalBrowser } from '@/core/telegram';
 
-export default function Topbar({ onToggleSidebar }) {
+export default function Topbar({ onToggleSidebar, sidebarVisible }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth() || {};
@@ -49,8 +49,8 @@ export default function Topbar({ onToggleSidebar }) {
         <button
           type="button"
           onClick={onToggleSidebar}
-          className="p-2 -ml-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg md:hidden shrink-0 transition-colors"
-          title="เปิดเมนูหลัก"
+          className="p-2 -ml-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg shrink-0 transition-colors"
+          title="เปิด/ปิดเมนูนำทาง"
         >
           <Menu className="w-5 h-5" />
         </button>

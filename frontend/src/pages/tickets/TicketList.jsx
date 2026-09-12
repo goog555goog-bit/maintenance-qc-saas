@@ -145,8 +145,8 @@ export default function TicketList() {
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2.5">
           {/* Search Box */}
           <div className="relative">
             <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
@@ -223,19 +223,19 @@ export default function TicketList() {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       ) : viewMode === 'table' ? (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden w-full">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full min-w-[660px] text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-400 uppercase bg-slate-50/70">
-                  <th className="py-3 px-4">รหัสใบงาน</th>
-                  <th className="py-3 px-4">สาขา</th>
-                  <th className="py-3 px-4">หมวดหมู่งาน</th>
-                  <th className="py-3 px-4">สถานะ</th>
-                  <th className="py-3 px-4">ความเร่งด่วน</th>
-                  <th className="py-3 px-4">ทีมผู้รับผิดชอบ</th>
-                  <th className="py-3 px-4">วันที่แจ้ง</th>
-                  <th className="py-3 px-4 text-right">การจัดการ</th>
+                  <th className="py-2.5 px-3 sm:py-3 sm:px-4">รหัสใบงาน</th>
+                  <th className="py-2.5 px-3 sm:py-3 sm:px-4">สาขา</th>
+                  <th className="py-2.5 px-3 sm:py-3 sm:px-4">หมวดหมู่งาน</th>
+                  <th className="py-2.5 px-3 sm:py-3 sm:px-4">สถานะ</th>
+                  <th className="py-2.5 px-3 sm:py-3 sm:px-4">ความเร่งด่วน</th>
+                  <th className="py-2.5 px-3 sm:py-3 sm:px-4">ทีมผู้รับผิดชอบ</th>
+                  <th className="py-2.5 px-3 sm:py-3 sm:px-4">วันที่แจ้ง</th>
+                  <th className="py-2.5 px-3 sm:py-3 sm:px-4 text-right">การจัดการ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -246,30 +246,30 @@ export default function TicketList() {
                       className="hover:bg-slate-50/70 cursor-pointer transition-colors"
                       onClick={() => navigate(`/tickets/${t.ticket_id}`)}
                     >
-                      <td className="py-3.5 px-4">
+                      <td className="py-2.5 px-3 sm:py-3.5 sm:px-4">
                         <span className="font-mono font-bold text-blue-600">
                           {t.ticket_id}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 font-medium text-slate-800">
+                      <td className="py-2.5 px-3 sm:py-3.5 sm:px-4 font-medium text-slate-800">
                         {t.branch_name || ('สาขา ' + t.branch_id)}
                       </td>
-                      <td className="py-3.5 px-4 text-slate-600">
+                      <td className="py-2.5 px-3 sm:py-3.5 sm:px-4 text-slate-600">
                         {t.category_name || t.work_type_name || '-'}
                       </td>
-                      <td className="py-3.5 px-4">
+                      <td className="py-2.5 px-3 sm:py-3.5 sm:px-4">
                         {getStatusBadge(t.status)}
                       </td>
-                      <td className="py-3.5 px-4">
+                      <td className="py-2.5 px-3 sm:py-3.5 sm:px-4">
                         {getPriorityBadge(t.priority)}
                       </td>
-                      <td className="py-3.5 px-4 text-slate-500">
+                      <td className="py-2.5 px-3 sm:py-3.5 sm:px-4 text-slate-500">
                         {t.team_name || t.team || '-'}
                       </td>
-                      <td className="py-3.5 px-4 text-slate-400">
+                      <td className="py-2.5 px-3 sm:py-3.5 sm:px-4 text-slate-400">
                         {t.created_at ? new Date(t.created_at).toLocaleDateString('th-TH') : '-'}
                       </td>
-                      <td className="py-3.5 px-4 text-right">
+                      <td className="py-2.5 px-3 sm:py-3.5 sm:px-4 text-right">
                         <Link 
                           to={`/tickets/${t.ticket_id}`}
                           onClick={(e) => e.stopPropagation()}
