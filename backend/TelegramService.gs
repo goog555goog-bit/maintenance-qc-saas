@@ -150,10 +150,11 @@ const TelegramService = {
     // 3. Fast Webhook Reply: Respond immediately with sendMessage method
     // This executes in under 0.5s without UrlFetchApp, stopping all Telegram retry loops!
     const miniAppUrl = this.getMiniAppUrl();
-    if (text.indexOf('/start') === 0) {
+    const isStartOrHelp = text.indexOf('/start') === 0 || text.indexOf('/help') === 0 || text.indexOf('/app') === 0 || text.toLowerCase() === 'help';
+    if (isStartOrHelp) {
       let welcomeMsg = '<b>ยินดีต้อนรับสู่ระบบบริหารงานซ่อมบำรุง (Maintenance QC SaaS)</b>\n\n';
       welcomeMsg += 'ท่านได้เชื่อมต่อกับระบบเรียบร้อยแล้ว\n';
-      welcomeMsg += '\nสามารถแตะปุ่มด้านล่างเพื่อเปิดระบบซ่อมบำรุงได้ทันที';
+      welcomeMsg += '\nสามารถแตะปุ่ม <b>"เปิดระบบซ่อมบำรุง"</b> ที่แถบด้านล่าง หรือกดปุ่ม <b>Open App</b> เพื่อเข้าใช้งานระบบได้ทันที';
 
       return {
         method: 'sendMessage',
