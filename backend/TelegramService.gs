@@ -162,16 +162,14 @@ const TelegramService = {
         text: welcomeMsg,
         parse_mode: 'HTML',
         reply_markup: {
-          keyboard: [
+          inline_keyboard: [
             [
               {
-                text: 'Open App',
+                text: 'Open',
                 web_app: { url: miniAppUrl }
               }
             ]
-          ],
-          resize_keyboard: true,
-          is_persistent: true
+          ]
         }
       };
     }

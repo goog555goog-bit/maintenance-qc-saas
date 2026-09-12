@@ -345,7 +345,7 @@ const Router = {
         }
         const testText = '<b>ทดสอบการแจ้งเตือน Telegram สำเร็จ</b>\n\nระบบบริหารงานซ่อมบำรุงสามารถส่งข้อความตรงถึงท่านได้เรียบร้อยแล้ว\nเวลาทดสอบ: ' + new Date().toLocaleTimeString('th-TH') + ' น.';
         const testRes = TelegramService.sendMessage(userStatus.telegram_chat_id, testText, {
-          inline_keyboard: [[{ text: 'เปิดระบบซ่อมบำรุง', web_app: { url: TelegramService.getMiniAppUrl() } }]]
+          inline_keyboard: [[{ text: 'Open', web_app: { url: TelegramService.getMiniAppUrl() } }]]
         });
         return { success: true, api_response: testRes };
       }
