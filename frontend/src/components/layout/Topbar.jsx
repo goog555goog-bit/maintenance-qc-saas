@@ -62,8 +62,8 @@ export default function Topbar({ onToggleSidebar, sidebarVisible }) {
         </div>
       </div>
 
-      {/* Action Center */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      {/* Action Center (with safety padding on the right for Telegram Mini App close button) */}
+      <div className={`flex items-center gap-2 sm:gap-3 ${isTelegramWebApp() ? 'pr-12 sm:pr-14' : ''}`}>
         {/* Open in Browser / Fullscreen Button (Especially useful for Telegram Desktop) */}
         <button
           onClick={() => {

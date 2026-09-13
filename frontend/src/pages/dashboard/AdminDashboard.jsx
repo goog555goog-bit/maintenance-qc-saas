@@ -36,30 +36,47 @@ import StatusBadge from '@/components/ui/StatusBadge';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const [tickets, setTickets] = useState([]);
+  const [tickets, setTickets] = useState(() => {
+    try {
+      const cached = localStorage.getItem('cached_admin_tickets');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
   const [teams, setTeams] = useState([]);
   const [branches, setBranches] = useState([]);
   const [fuelRate, setFuelRate] = useState(5.0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [timeFilter, setTimeFilter] = useState('all'); // 'all' | 'month' | 'week'
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       setIsLoading(true);
+      const toArray = (v) => Array.isArray(v) ? v : (Array.isArray(v?.tickets) ? v.tickets : (Array.isArray(v?.data) ? v.data : []));
       try {
-        const [ticketsRes, teamsRes, branchesRes, fuelRateRes] = await Promise.all([
-          apiCall('ticket.list').catch(() => []),
-          apiCall('team.list').catch(() => []),
-          apiCall('branch.list').catch(() => []),
-          apiCall('fuel_rate.get').catch(() => null)
+        // Fetch tickets first to ensure KPI numbers load reliably without concurrency clash on GAS
+        const ticketsRes = await apiCall('ticket.list');
+        const ticketList = toArray(ticketsRes);
+        setTickets(ticketList);
+        try {
+          localStorage.setItem('cached_admin_tickets', JSON.stringify(ticketList));
+        } catch (e) {}
+
+        // Fetch supporting metadata smoothly
+        const [teamsRes, branchesRes, fuelRateRes] = await Promise.allSettled([
+          apiCall('team.list'),
+          apiCall('branch.list'),
+          apiCall('fuel_rate.get')
         ]);
 
-        const toArray = (v) => Array.isArray(v) ? v : (Array.isArray(v?.tickets) ? v.tickets : (Array.isArray(v?.data) ? v.data : []));
-        setTickets(toArray(ticketsRes));
-        setTeams(toArray(teamsRes));
-        setBranches(toArray(branchesRes));
-        if (fuelRateRes && (fuelRateRes.rate_per_km || fuelRateRes.rate)) {
-          setFuelRate(Number(fuelRateRes.rate_per_km || fuelRateRes.rate) || 5.0);
+        if (teamsRes.status === 'fulfilled') setTeams(toArray(teamsRes.value));
+        if (branchesRes.status === 'fulfilled') setBranches(toArray(branchesRes.value));
+        if (fuelRateRes.status === 'fulfilled' && fuelRateRes.value) {
+          const val = fuelRateRes.value;
+          if (val.rate_per_km || val.rate) {
+            setFuelRate(Number(val.rate_per_km || val.rate) || 5.0);
+          }
         }
       } catch (err) {
         console.error('Error fetching admin dashboard data:', err);
